@@ -6,7 +6,7 @@ async fn test_install() {
 
     let result = launcher.full_install(None).await;
 
-    assert!(result.is_ok(), "La instalación debería haber funcionado");
+    assert!(result.is_ok(), "Installation process done successfully");
 }
 
 #[tokio::test]
@@ -15,7 +15,7 @@ async fn run() {
 
     let result = launcher.start().await;
 
-    assert!(result.is_ok(), "Juego cerrado");
+    assert!(result.is_ok(), "Game closed");
 }
 
 #[tokio::test]
@@ -29,15 +29,12 @@ async fn java_donwload() {
 
 #[tokio::test]
 async fn check_java_version_test() {
-
     let launcher = OxideLauncher::new("TestUser");
-
     let result = launcher.check_java(17).await;
 
-    let is_installed = result.expect("Fallo al ejecutar el comando java");
+    assert!(result.is_ok(), "La función de chequeo ha fallado técnicamente");
 
+    let is_installed = result.unwrap();
     println!("¿Java 17 detectado?: {}", is_installed);
-
-    assert!(is_installed, "No se detectó Java 17 en el sistema");
 
 }

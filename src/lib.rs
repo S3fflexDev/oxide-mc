@@ -19,18 +19,17 @@ pub struct OxideLauncher {
 
 impl OxideLauncher {
     pub fn new(username: &str) -> Self {
-        let base = functions::obtener_ruta_base();
+        let base = functions::base_path();
 
         let java_path = if functions::check_java_version(17) {
-            std::path::PathBuf::from("java") // Usamos el comando global
+            std::path::PathBuf::from("java")
         } else {
-            base.join("runtime/jdk-17.0.10+7/bin/java.exe") // Usamos el nuestro
+            base.join("runtime/jdk-17.0.10+7/bin/java.exe")
         };
 
         Self {
             settings: LauncherConfig {
                 game_path: base.clone(),
-                // Ajusta esto a donde tengas tu Java realmente
                 java_path,
                 username: username.to_string(),
             },
@@ -54,17 +53,17 @@ impl OxideLauncher {
     pub async fn full_install(&self, modpack_url: Option<&str>) -> Result<()> {
         println!("Beggining installation on: {:?}", self.settings.game_path);
 
-        // 1. Obtener manifiestos
+        // Get manifests
         let manifest = functions::get_manifest().await?;
         let fabric_manifest = functions::get_fabric_manifest().await?;
 
-        // 2. Descargas paralelas (Tus funciones ya optimizadas)
+        // Downloads
         functions::download_libraries(&manifest, &self.settings.game_path).await?;
         functions::download_fabric_libraries(&fabric_manifest, &self.settings.game_path).await?;
         functions::download_client(&manifest, &self.settings.game_path).await?;
         functions::download_assets(&manifest, &self.settings.game_path).await?;
 
-        // 3. Inyectar modpack si el usuario pasó una URL
+        // Inyect modpack
         if let Some(url) = modpack_url {
             functions::inject_modpack(url, &self.settings.game_path).await?;
         }
@@ -76,7 +75,7 @@ impl OxideLauncher {
     pub async fn start(&self) -> Result<std::process::Child> {
         if !self.settings.java_path.exists() {
             return Err(anyhow::anyhow!(
-            "No se encontró Java en la ruta: {:?}",
+            "Java not found on path: {:?}",
             self.settings.java_path
         ));
         }
@@ -99,7 +98,7 @@ impl OxideLauncher {
 
     pub async fn java_download(&mut self) -> Result<()> {
         
-        println!("Iniciando descarga de Java 17...");
+        println!("Java download started...");
         
         functions::download_java_runtime(&self.settings.game_path).await?;
 
@@ -111,7 +110,7 @@ impl OxideLauncher {
 
         self.settings.java_path = nuevo_path;
 
-        println!("🚀 Path de Java actualizado a: {:?}", self.settings.java_path);
+        println!("Java path updated to: {:?}", self.settings.java_path);
         Ok(())
     }
 

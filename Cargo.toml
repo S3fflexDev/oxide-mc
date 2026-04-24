@@ -1,7 +1,14 @@
 [package]
-name = "mc-lib"
+name = "oxide-mc"
 version = "0.1.0"
 edition = "2024"
+authors = ["S3fflex <ejiteambros@gmail.com>"]
+description = "A high-performance, async Minecraft engine core built in Rust for Tauri launchers."
+license = "MIT"
+repository = "https://github.com/S3fflexDev/oxide-mc"
+readme = "README.md"
+keywords = ["minecraft", "launcher", "tauri", "async"]
+categories = ["development-tools"]
 
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
