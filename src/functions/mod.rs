@@ -1,6 +1,9 @@
+use std::io::Cursor;
 use std::path::Path;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
+use zip_extract::extract;
+use crate::fabic_manifest_model::{FabricLibrary, FabricProfile};
 use crate::models::{AssetIndex, AssetIndexContent, VersionManifest}; // Importamos tus Structs
 
 pub async fn get_manifest() -> anyhow::Result<VersionManifest> {
@@ -32,6 +35,7 @@ pub async fn get_manifest() -> anyhow::Result<VersionManifest> {
 
     Ok(manifest)
 }
+
 
 pub async fn listar_librerias() -> anyhow::Result<()> {
     let manifest = get_manifest().await?;
@@ -117,6 +121,8 @@ pub fn gen_classpath(manifest: &VersionManifest, base_path: &std::path::Path) ->
     let mut cp_parts = Vec::new();
     let libraries_dir = base_path.join("libraries");
 
+    let separador_cp = if cfg!(target_os = "windows") { ";" } else { ":" };
+
     // 1. Añadimos todas las librerías que tienen un path
     for lib in &manifest.libraries {
         if let Some(artifact) = &lib.downloads.artifact {
@@ -135,7 +141,7 @@ pub fn gen_classpath(manifest: &VersionManifest, base_path: &std::path::Path) ->
         cp_parts.push(path_str.to_string());
     }
 
-    cp_parts.join(";")
+    cp_parts.join(separador_cp)
 }
 
 // ------------------------------------- ASSETS
@@ -193,4 +199,206 @@ pub async fn download_assets(manifest: &VersionManifest, base_path: &std::path::
 
     println!("All assets are ready to load up.");
     Ok(())
+}
+
+
+
+// ------------------------------------------ FABRIC
+
+pub async fn get_fabric_manifest() -> anyhow::Result<FabricProfile> {
+    let url = "https://meta.fabricmc.net/v2/versions/loader/1.20.1/0.19.2/profile/json";
+
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .build()?;
+
+    let response = client.get(url).send().await?;
+
+    // Parseamos directamente a la nueva estructura de Fabric
+    let manifest: FabricProfile = response.json().await?;
+
+    Ok(manifest)
+}
+
+pub fn gen_fabric_path(lib: &FabricLibrary) -> String {
+    let parts: Vec<&str> = lib.name.split(':').collect();
+    let group = parts[0].replace('.', "/");
+    let artifact = parts[1];
+    let version = parts[2];
+
+    let jar_name = format!("{}-{}.jar", artifact, version);
+    // DEVOLVEMOS SOLO LA RUTA: "net/fabricmc/..."
+    format!("{}/{}/{}/{}", group, artifact, version, jar_name)
+}
+
+pub async fn download_fabric_libraries(manifest_fabric: &FabricProfile, base_path: &Path) -> anyhow::Result<()> {
+    let client = reqwest::Client::new();
+    let libraries_dir = base_path.join("libraries");
+
+    println!("Iniciando descarga de librerías de Fabric...");
+
+    for lib in &manifest_fabric.libraries {
+        // 1. Obtenemos solo la parte relativa (la carpeta)
+        let relative_path = gen_fabric_path(&lib);
+
+        // 2. Ruta en el DISCO (test_minecraft/libraries/net/fabricmc/...)
+        let target_path = libraries_dir.join(&relative_path.replace('/', "\\")); // Cambiamos / por \ para Windows
+
+        // 3. URL de INTERNET (https://maven.fabricmc.net/net/fabricmc/...)
+        let download_url = format!("{}{}", lib.url, relative_path);
+
+        if let Some(parent) = target_path.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+
+        if !target_path.exists() {
+            println!("Descargando Fabric Lib: {}", lib.name);
+
+            let response = client.get(&download_url).send().await?;
+            if response.status().is_success() {
+                let bytes = response.bytes().await?;
+                let mut file = fs::File::create(&target_path).await?;
+                file.write_all(&bytes).await?;
+            } else {
+                println!("⚠️ Error 404 en Fabric Lib: {}", download_url);
+            }
+        }
+    }
+
+    println!("¡Librerías de Fabric descargadas con éxito!");
+    Ok(())
+}
+
+pub fn gen_cp_fabric(
+    manifest_mc: &VersionManifest,
+    manifest_fabric: &FabricProfile,
+    base_path: &std::path::Path
+) -> String {
+    let mut cp_parts = Vec::new();
+    let libraries_dir = base_path.join("libraries");
+
+    let separador_cp = if cfg!(target_os = "windows") { ";" } else { ":" };
+
+    // 1. LIBS DE MINECRAFT (Ya lo tienes bien)
+    for lib in &manifest_mc.libraries {
+        if let Some(artifact) = &lib.downloads.artifact {
+            if let Some(path) = &artifact.path {
+                cp_parts.push(libraries_dir.join(path).to_str().unwrap().to_string());
+            }
+        }
+    }
+
+    // 2. LIBS DE FABRIC (Usamos la nueva función)
+    for lib in &manifest_fabric.libraries {
+        let rel_path = gen_fabric_path(lib);
+        let full_path = libraries_dir.join(rel_path.replace('/', "\\"));
+        cp_parts.push(full_path.to_str().unwrap().to_string());
+    }
+
+    // 3. CLIENT.JAR
+    let client_jar = base_path.join("versions").join(&manifest_mc.id).join(format!("{}.jar", manifest_mc.id));
+    cp_parts.push(client_jar.to_str().unwrap().to_string());
+
+    cp_parts.join(separador_cp)
+}
+
+// --------------------------------- INYECT MODPACK
+
+pub async fn inject_modpack(url: &str, base_path: &std::path::Path) -> anyhow::Result<()> {
+    let client = reqwest::Client::new();
+
+    println!("📥 Descargando modpack desde: {}", url);
+
+    let response = client.get(url).send().await?;
+    let bytes = response.bytes().await?;
+
+    let mods_dir = base_path.join("mods");
+    let config_dir = base_path.join("config");
+
+    if mods_dir.exists() { fs::remove_dir_all(&mods_dir).await?; }
+    if config_dir.exists() { fs::remove_dir_all(&config_dir).await?; }
+
+    let target_dir = base_path;
+    let buffer = Cursor::new(bytes);
+
+    println!("📦 Extrayendo archivos en {:?}...", target_dir);
+
+    extract(buffer, target_dir, false)?;
+
+    println!("✅ Modpack inyectado correctamente.");
+    Ok(())
+}
+
+
+// --------------------------------- MULTIPLATFORM
+
+use directories::ProjectDirs;
+use std::process::Command;
+
+pub fn obtener_ruta_base() -> std::path::PathBuf {
+    // Esto crea una ruta tipo:
+    // Win: C:\Users\Nombre\AppData\Roaming\OxideMC\data
+    // Lin: /home/nombre/.local/share/oxidemc
+    // Mac: /Users/Nombre/Library/Application Support/OxideMC
+    if let Some(proj_dirs) = ProjectDirs::from("com", "s3fflex", "oxidemc") {
+        return proj_dirs.data_dir().to_path_buf();
+    }
+    // Si algo falla, usamos una carpeta local como "salvavidas"
+    std::path::PathBuf::from(".minecraft")
+}
+
+// ----------------------------------------- JAVA
+
+// En src/functions/mod.rs (necesitarás la crate 'zip' o 'zip-extract')
+pub async fn download_java_runtime(base_path: &std::path::Path) -> anyhow::Result<()> {
+    let runtime_dir = base_path.join("runtime");
+    let java_exe = runtime_dir.join("bin/java.exe");
+
+    if !java_exe.exists() {
+        println!("☕ Java no encontrado. Descargando JRE 17 portable...");
+
+        let url = "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.10%2B7/OpenJDK17U-jre_x64_windows_hotspot_17.0.10_7.zip";
+
+        let client = reqwest::Client::new();
+        let bytes = client.get(url).send().await?.bytes().await?;
+
+        // Extraemos el zip directamente en la carpeta runtime
+        let cursor = std::io::Cursor::new(bytes);
+        zip_extract::extract(cursor, &runtime_dir, true)?;
+
+        println!("✅ Java instalado correctamente en AppData.");
+    }
+
+    Ok(())
+}
+
+pub fn check_java_version(target_version: u32) -> bool {
+    // 1. Intentamos ejecutar "java -version"
+    let output = Command::new("java")
+        .arg("-version")
+        .output();
+
+    match output {
+        Ok(out) => {
+            // Java imprime la versión en stderr (errores), no en stdout
+            let version_info = String::from_utf8_lossy(&out.stderr);
+
+            // Buscamos el número de versión en el texto
+            // El formato suele ser: java version "17.0.10" ...
+            let version_string = format!("\"{}\"", target_version); // Buscamos "17"
+            let alt_version_string = format!(" {}", target_version); // O buscamos 17 suelto
+
+            if version_info.contains(&version_string) || version_info.contains(&alt_version_string) {
+                println!("✅ Se detectó Java {} en el sistema.", target_version);
+                return true;
+            }
+
+            println!("⚠️ Se encontró Java, pero no es la versión {}.", target_version);
+            false
+        }
+        Err(_) => {
+            println!("Java no está instalado en el sistema (no se encontró en el PATH).");
+            false
+        }
+    }
 }

@@ -6,7 +6,8 @@ pub fn lanzar_juego(
     base_path: &std::path::Path,
     java_bin_path: &std::path::Path,
     username: &str,
-    classpath: String
+    classpath: String,
+    main_class: &String
 ) -> anyhow::Result<Child> {
 
     let mut cmd = Command::new(java_bin_path);
@@ -19,7 +20,7 @@ pub fn lanzar_juego(
     cmd.arg("-cp").arg(classpath);
 
     // Clase Principal (la sacamos del JSON)
-    cmd.arg(&manifest.main_class);
+    cmd.arg(main_class);
 
     // Argumentos de Minecraft (Lo básico para que arranque)
     cmd.arg("--username").arg(username);

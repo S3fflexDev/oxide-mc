@@ -1,54 +1,123 @@
+use std::path::PathBuf;
+use anyhow::Result;
+use crate::functions::{check_java_version, download_java_runtime};
 
-mod models;
-mod functions;
-mod launcher;
+pub mod models;
+pub mod functions;
+pub mod launcher;
+pub mod fabic_manifest_model;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub struct LauncherConfig {
+    pub game_path: PathBuf,
+    pub java_path: PathBuf,
+    pub username: String,
+}
 
-    #[tokio::test]
-    async fn download() {
-        let ruta_juego = std::path::Path::new("test_minecraft");
-        let java_path = ruta_juego.join("runtime/jdk-17.0.10+7/bin/java.exe");
+pub struct OxideLauncher {
+    pub settings: LauncherConfig,
+}
 
-        // 1. Obtener los datos
-        let manifest = functions::get_manifest().await.unwrap();
+impl OxideLauncher {
+    pub fn new(username: &str) -> Self {
+        let base = functions::obtener_ruta_base();
 
-        // 2. Descargar Librerías
-        functions::download_libraries(&manifest, ruta_juego).await.unwrap();
+        let java_path = if functions::check_java_version(17) {
+            std::path::PathBuf::from("java") // Usamos el comando global
+        } else {
+            base.join("runtime/jdk-17.0.10+7/bin/java.exe") // Usamos el nuestro
+        };
 
-        // 3. Descargar el Cliente (EL PASO QUE FALTA)
-        functions::download_client(&manifest, ruta_juego).await.unwrap();
-
-        functions::download_assets(&manifest, ruta_juego).await.unwrap();
-
-        println!("¡All done successfully!");
-    }
-
-    #[tokio::test]
-    async fn launch() {
-        let game_path = std::path::Path::new("test_minecraft");
-        let java_path = game_path.join("runtime/jdk-17.0.10+7/bin/java.exe");
-
-        // 1. Obtener los datos
-        let manifest = functions::get_manifest().await.unwrap();
-
-        let cp = functions::gen_classpath(&manifest, game_path);
-        println!("Classpath generated ({} characters)", cp.len());
-
-        match launcher::lanzar_juego(&manifest, game_path, &java_path, "S3ffl_Dev", cp) {
-            Ok(mut child) => {
-                println!("Windows opened! Waiting for game to close...");
-                // Esto hace que el test espere a que cierres el juego para terminar
-                let status = child.wait().expect("Failed waiting game");
-                println!("The game exited with status: {}", status);
+        Self {
+            settings: LauncherConfig {
+                game_path: base.clone(),
+                // Ajusta esto a donde tengas tu Java realmente
+                java_path,
+                username: username.to_string(),
             },
-            Err(e) => {
-                panic!("Error launching game: {}", e);
-            }
         }
     }
 
+    pub fn new_at_path(username: &str, custom_path: PathBuf) -> Self {
+        Self::create_with_path(username, custom_path)
+    }
 
+    fn create_with_path(username: &str, path: PathBuf) -> Self {
+        Self {
+            settings: LauncherConfig {
+                java_path: path.join("runtime/jdk-17.0.10+7/bin/java.exe"),
+                game_path: path,
+                username: username.to_string(),
+            },
+        }
+    }
+
+    pub async fn full_install(&self, modpack_url: Option<&str>) -> Result<()> {
+        println!("Beggining installation on: {:?}", self.settings.game_path);
+
+        // 1. Obtener manifiestos
+        let manifest = functions::get_manifest().await?;
+        let fabric_manifest = functions::get_fabric_manifest().await?;
+
+        // 2. Descargas paralelas (Tus funciones ya optimizadas)
+        functions::download_libraries(&manifest, &self.settings.game_path).await?;
+        functions::download_fabric_libraries(&fabric_manifest, &self.settings.game_path).await?;
+        functions::download_client(&manifest, &self.settings.game_path).await?;
+        functions::download_assets(&manifest, &self.settings.game_path).await?;
+
+        // 3. Inyectar modpack si el usuario pasó una URL
+        if let Some(url) = modpack_url {
+            functions::inject_modpack(url, &self.settings.game_path).await?;
+        }
+
+        println!("All done successfully!.");
+        Ok(())
+    }
+
+    pub async fn start(&self) -> Result<std::process::Child> {
+        if !self.settings.java_path.exists() {
+            return Err(anyhow::anyhow!(
+            "No se encontró Java en la ruta: {:?}",
+            self.settings.java_path
+        ));
+        }
+
+        let manifest = functions::get_manifest().await?;
+        let fabric_manifest = functions::get_fabric_manifest().await?;
+
+        let cp = functions::gen_cp_fabric(&manifest, &fabric_manifest, &self.settings.game_path);
+        let main_class = &fabric_manifest.main_class;
+
+        launcher::lanzar_juego(
+            &manifest,
+            &self.settings.game_path,
+            &self.settings.java_path,
+            &self.settings.username,
+            cp,
+            main_class
+        )
+    }
+
+    pub async fn java_download(&mut self) -> Result<()> {
+        
+        println!("Iniciando descarga de Java 17...");
+        
+        functions::download_java_runtime(&self.settings.game_path).await?;
+
+        let nuevo_path = self.settings.game_path
+            .join("runtime")
+            .join("jdk-17.0.10+7")
+            .join("bin")
+            .join(if cfg!(target_os = "windows") { "java.exe" } else { "java" });
+
+        self.settings.java_path = nuevo_path;
+
+        println!("🚀 Path de Java actualizado a: {:?}", self.settings.java_path);
+        Ok(())
+    }
+
+    pub async fn check_java(&self, version: u32) -> anyhow::Result<bool> {
+
+        Ok(functions::check_java_version(version))
+
+    }
 }
