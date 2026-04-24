@@ -11,6 +11,8 @@ OxideMC is a lightweight Minecraft manager designed for efficiency and performan
 
 Currently, it serves as a full installer and injector for **Fabric 1.20.1**, with support for **NeoForge** coming soon.
 
+For most Minecraft versions coming soon...
+
 ## 🚀 Why OxideMC?
 
 Most Minecraft launchers are resource-heavy. OxideMC is different:
