@@ -1,4 +1,4 @@
-use crate::functions::{check_java_version, download_java_runtime};
+use crate::functions::{check_java_version, download_java_runtime, JAVA_EXECUTABLE};
 use anyhow::Result;
 use std::path::PathBuf;
 
@@ -34,13 +34,8 @@ impl OxideLauncher {
         println!("base path: {}", base.display());
 
         let _java_installed = functions::check_java_version().unwrap();
-        
-        let java_path = base.join("runtime").join("bin");
 
-        #[cfg(target_os = "windows")]
-        let java_path = java_path.join("java.exe");
-        #[cfg(not(target_os = "windows"))]
-        let java_path = java_path.join("java");
+        let java_path = base.join("runtime").join("bin").join(JAVA_EXECUTABLE);
 
         Self {
             settings: LauncherConfig {
@@ -56,9 +51,10 @@ impl OxideLauncher {
     }
 
     fn create_with_path(username: &str, path: PathBuf) -> Self {
+        let java_path = path.join("runtime").join("bin").join(JAVA_EXECUTABLE);
         Self {
             settings: LauncherConfig {
-                java_path: path.join("runtime/jdk-17.0.10+7/bin/java.exe"),
+                java_path,
                 game_path: path,
                 username: username.to_string(),
             },
@@ -126,15 +122,12 @@ impl OxideLauncher {
 
         let _full_name = download_java_runtime(&self.settings.game_path, version).await?;
 
-        let nuevo_path = self.settings.game_path.join("runtime").join("bin").join(
-            if cfg!(target_os = "windows") {
-                "java.exe"
-            } else {
-                "java"
-            },
-        );
-
-        self.settings.java_path = nuevo_path;
+        self.settings.java_path = self
+            .settings
+            .game_path
+            .join("runtime")
+            .join("bin")
+            .join(JAVA_EXECUTABLE);
 
         println!("Java path updated to: {:?}", self.settings.java_path);
         Ok(())
