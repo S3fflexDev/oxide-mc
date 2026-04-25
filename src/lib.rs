@@ -24,8 +24,8 @@ pub struct InstallationSummary {
 }
 
 pub struct JavaInfo {
-    pub major: u32,         // Ejemplo: 17
-    pub full_name: String,  // Ejemplo: "jdk-17.0.10+7"
+    pub major: u32,
+    pub full_name: String,
 }
 
 
@@ -62,7 +62,7 @@ impl OxideLauncher {
         }
     }
 
-    pub async fn full_install(&self, modpack_url: Option<&str>) -> Result<()> {
+    pub async fn full_install(&self, modpack_url: Option<&str>) -> Result<i64> {
         println!("Beggining installation on: {:?}", self.settings.game_path);
 
         // Get manifests
@@ -85,8 +85,10 @@ impl OxideLauncher {
             functions::inject_modpack(url, &self.settings.game_path).await?;
         }
 
+        println!("Install java {} before running with command java_download!.", java_version);
+
         println!("All done successfully!.");
-        Ok(())
+        Ok(*java_version)
     }
 
     pub async fn start(&self) -> Result<std::process::Child> {
@@ -117,11 +119,10 @@ impl OxideLauncher {
         
         println!("Java download started...");
 
-        let full_name = functions::download_java_runtime(&self.settings.game_path, version).await?;
+        let full_name = download_java_runtime(&self.settings.game_path, version).await?;
 
         let nuevo_path = self.settings.game_path
             .join("runtime")
-            .join(full_name)
             .join("bin")
             .join(if cfg!(target_os = "windows") { "java.exe" } else { "java" });
 
@@ -131,9 +132,9 @@ impl OxideLauncher {
         Ok(())
     }
 
-    pub async fn check_java(&self, version: u32) -> anyhow::Result<i32> {
+    pub async fn check_java(&self) -> anyhow::Result<i32> {
 
-        Ok(functions::check_java_version()?)
+        Ok(check_java_version()?)
 
     }
 }

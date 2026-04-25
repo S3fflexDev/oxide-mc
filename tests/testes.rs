@@ -31,7 +31,7 @@ async fn java_donwload() {
 #[tokio::test]
 async fn check_java_version_test() {
     let launcher = OxideLauncher::new("TestUser");
-    let result = launcher.check_java(17).await;
+    let result = launcher.check_java().await;
 
     assert!(result.is_ok(), "La función de chequeo ha fallado técnicamente");
 

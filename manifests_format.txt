@@ -20,3 +20,13 @@ https://piston-meta.mojang.com/mc/game/version_manifest_v2.json
 
 Minecraft version manifest:
 https://piston-meta.mojang.com/v1/packages/900a4d828d608162c1061113b1176e656000cb45/1.21.1.json
+
+Usar para saber el path deseado
+get_java_path(get_manifest().java_version.major_version) => path
+
+Manera de manejar las versiones
+let url = match (version, std::env::consts::OS) {
+    (21, "windows") => "https://...windows.zip",
+    (21, "linux") => "https://...linux.tar.gz",
+    _ => "...",
+};

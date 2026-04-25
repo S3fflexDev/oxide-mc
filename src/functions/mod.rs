@@ -183,8 +183,6 @@ pub async fn download_assets(manifest: &VersionManifest, base_path: &std::path::
     Ok(())
 }
 
-
-
 // ------------------------------------------ FABRIC
 
 pub async fn get_fabric_manifest() -> anyhow::Result<FabricProfile> {
@@ -408,4 +406,3 @@ pub fn check_java_version() -> anyhow::Result<i32> {
         }
     }
 }
-
