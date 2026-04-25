@@ -1,10 +1,40 @@
 use crate::fabric_manifest_model::{FabricLibrary, FabricProfile};
 use crate::models::{AssetIndexContent, VersionManifest};
-use std::io::Cursor;
 use std::path::Path;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
-use zip_extract::extract;
+
+fn extract_zip(data: &[u8], target_dir: &Path, strip_toplevel: bool) -> anyhow::Result<()> {
+    let cursor = std::io::Cursor::new(data);
+    let mut archive = zip::ZipArchive::new(cursor)?;
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        let Some(enclosed_name) = file.enclosed_name() else {
+            continue;
+        };
+        let path = if strip_toplevel {
+            let mut components = enclosed_name.components();
+            components.next();
+            components.as_path().to_path_buf()
+        } else {
+            enclosed_name.to_path_buf()
+        };
+        if path.as_os_str().is_empty() {
+            continue;
+        }
+        let out_path = target_dir.join(&path);
+        if file.is_dir() {
+            std::fs::create_dir_all(&out_path)?;
+        } else {
+            if let Some(parent) = out_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let mut out_file = std::fs::File::create(&out_path)?;
+            std::io::copy(&mut file, &mut out_file)?;
+        }
+    }
+    Ok(())
+}
 
 #[cfg(target_os = "windows")]
 pub const JAVA_EXECUTABLE: &str = "java.exe";
@@ -362,11 +392,10 @@ pub async fn inject_modpack(url: &str, base_path: &std::path::Path) -> anyhow::R
     }
 
     let target_dir = base_path;
-    let buffer = Cursor::new(bytes);
 
     println!("Extracting files in {:?}...", target_dir);
 
-    extract(buffer, target_dir, false)?;
+    extract_zip(&bytes, target_dir, false)?;
 
     println!("Modpack injected successfully.");
     Ok(())
@@ -418,8 +447,7 @@ fn java_download_url(version: i64) -> anyhow::Result<(&'static str, &'static str
 
 #[cfg(target_os = "windows")]
 fn extract_java_archive(data: &[u8], runtime_dir: &std::path::Path) -> anyhow::Result<()> {
-    let cursor = std::io::Cursor::new(data);
-    zip_extract::extract(cursor, runtime_dir, true)?;
+    extract_zip(data, runtime_dir, true)?;
     Ok(())
 }
 
