@@ -224,26 +224,37 @@ pub async fn download_assets(
 
     println!("Verifying {} assets...", index_data.objects.len());
 
-    // Download loop
+    let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(64));
+    let mut set = tokio::task::JoinSet::new();
+
     for (_name, obj) in index_data.objects {
-        let prefix = &obj.hash[..2];
-        let url = format!(
-            "https://resources.download.minecraft.net/{}/{}",
-            prefix, obj.hash
-        );
-        let folder = objects_dir.join(prefix);
-        let file_path = folder.join(&obj.hash);
+        let client = client.clone();
+        let objects_dir = objects_dir.clone();
+        let semaphore = semaphore.clone();
+        set.spawn(async move {
+            let _permit = semaphore.acquire().await;
+            let prefix = &obj.hash[..2];
+            let folder = objects_dir.join(prefix);
+            let file_path = folder.join(&obj.hash);
 
-        if !file_path.exists() {
-            fs::create_dir_all(&folder).await?;
+            if file_path.exists() {
+                return;
+            }
 
+            let _ = fs::create_dir_all(&folder).await;
+            let url = format!(
+                "https://resources.download.minecraft.net/{}/{}",
+                prefix, obj.hash
+            );
             if let Ok(res) = client.get(&url).send().await {
                 if let Ok(bytes) = res.bytes().await {
                     let _ = fs::write(&file_path, &bytes).await;
                 }
             }
-        }
+        });
     }
+
+    while set.join_next().await.is_some() {}
 
     println!("All assets are ready to load up.");
     Ok(())
