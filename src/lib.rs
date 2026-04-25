@@ -6,6 +6,7 @@ pub mod models;
 pub mod functions;
 pub mod launcher;
 pub mod fabric_manifest_model;
+mod manifest_indexes;
 
 pub struct LauncherConfig {
     pub game_path: PathBuf,
@@ -17,20 +18,31 @@ pub struct OxideLauncher {
     pub settings: LauncherConfig,
 }
 
+pub struct InstallationSummary {
+    pub game_version: String,
+    pub fabric_loader: String,
+}
+
+pub struct JavaInfo {
+    pub major: u32,         // Ejemplo: 17
+    pub full_name: String,  // Ejemplo: "jdk-17.0.10+7"
+}
+
+
 impl OxideLauncher {
     pub fn new(username: &str) -> Self {
         let base = functions::base_path();
 
-        let java_path = if functions::check_java_version(17) {
-            std::path::PathBuf::from("java")
-        } else {
-            base.join("runtime/jdk-17.0.10+7/bin/java.exe")
-        };
+        let java_installed = functions::check_java_version().unwrap();
+
+        if (java_installed == 0) {
+
+        }
 
         Self {
             settings: LauncherConfig {
                 game_path: base.clone(),
-                java_path,
+                java_path: base.join("runtime").join("bin").join("java.exe"),
                 username: username.to_string(),
             },
         }
@@ -56,6 +68,11 @@ impl OxideLauncher {
         // Get manifests
         let manifest = functions::get_manifest().await?;
         let fabric_manifest = functions::get_fabric_manifest().await?;
+
+        let game_version = &manifest.id.clone();
+        let loader_version = &fabric_manifest.inherits_from.clone();
+
+        let java_version: &i64 = &manifest.java_version.major_version.clone();
 
         // Downloads
         functions::download_libraries(&manifest, &self.settings.game_path).await?;
@@ -96,15 +113,15 @@ impl OxideLauncher {
         )
     }
 
-    pub async fn java_download(&mut self) -> Result<()> {
+    pub async fn java_download(&mut self, version: i64) -> Result<()> {
         
         println!("Java download started...");
-        
-        functions::download_java_runtime(&self.settings.game_path).await?;
+
+        let full_name = functions::download_java_runtime(&self.settings.game_path, version).await?;
 
         let nuevo_path = self.settings.game_path
             .join("runtime")
-            .join("jdk-17.0.10+7")
+            .join(full_name)
             .join("bin")
             .join(if cfg!(target_os = "windows") { "java.exe" } else { "java" });
 
@@ -114,9 +131,9 @@ impl OxideLauncher {
         Ok(())
     }
 
-    pub async fn check_java(&self, version: u32) -> anyhow::Result<bool> {
+    pub async fn check_java(&self, version: u32) -> anyhow::Result<i32> {
 
-        Ok(functions::check_java_version(version))
+        Ok(functions::check_java_version()?)
 
     }
 }

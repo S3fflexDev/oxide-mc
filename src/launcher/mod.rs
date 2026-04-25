@@ -34,7 +34,7 @@ pub fn lanzar_juego(
     cmd.arg("--versionType").arg("release");
 
     // Lanzar!
-    println!("🚀 Launching Minecraft 1.20.1...");
+    println!("Launching Minecraft 1.20.1...");
     let process = cmd.spawn()?;
     Ok(process)
 }

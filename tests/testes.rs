@@ -23,7 +23,7 @@ async fn run() {
 async fn java_donwload() {
     let mut launcher = OxideLauncher::new("TestUser");
 
-    let result = launcher.java_download().await;
+    let result = launcher.java_download(21).await;
 
     assert!(result.is_ok(), "Java installed.");
 }

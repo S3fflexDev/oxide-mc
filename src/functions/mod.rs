@@ -16,17 +16,17 @@ pub async fn get_manifest() -> anyhow::Result<VersionManifest> {
 
     let response = client.get(url).send().await?;
 
-    let texto = response.text().await?;
+    let text = response.text().await?;
 
-    if texto.is_empty() {
+    if text.is_empty() {
         return Err(anyhow::anyhow!("Server did not return text"));
     }
 
-    println!("Firsts 50 characters received: {}", &texto[..std::cmp::min(50, texto.len())]);
+    println!("Firsts 50 characters received: {}", &text[..std::cmp::min(50, text.len())]);
 
-    let manifest: VersionManifest = serde_json::from_str(&texto).map_err(|e| {
+    let manifest: VersionManifest = serde_json::from_str(&text).map_err(|e| {
         // Error management
-        anyhow::anyhow!("Error parsing JSON: {} | Content: {}", e, &texto[..std::cmp::min(100, texto.len())])
+        anyhow::anyhow!("Error parsing JSON: {} | Content: {}", e, &text[..std::cmp::min(100, text.len())])
     })?;
 
     Ok(manifest)
@@ -348,29 +348,43 @@ pub fn base_path() -> std::path::PathBuf {
 
 // ----------------------------------------- JAVA
 
-pub async fn download_java_runtime(base_path: &std::path::Path) -> anyhow::Result<()> {
+pub async fn download_java_runtime(base_path: &std::path::Path, version: i64) -> anyhow::Result<String>  {
     let runtime_dir = base_path.join("runtime");
     let java_exe = runtime_dir.join("bin/java.exe");
 
-    if !java_exe.exists() {
-        println!("Java not found. Downloading JRE 17 portable...");
+    let (full_name, url) = match version {
+        17 => (
+            "jdk-17.0.5+8".to_string(),
+            "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.5%2B8/OpenJDK17U-debugimage_x64_windows_hotspot_17.0.5_8.zip"
+        ),
+        21 => (
+            "jdk-21.0.8+9".to_string(),
+            "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.zip"
+        ),
+        _ => return Err(anyhow::anyhow!("Version {} not supported", version)),
+    };
 
-        let url = "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.10%2B7/OpenJDK17U-jre_x64_windows_hotspot_17.0.10_7.zip";
+    println!("Downloading JDK {} portable...", version);
 
-        let client = reqwest::Client::new();
-        let bytes = client.get(url).send().await?.bytes().await?;
-
-        // Extract JRE
-        let cursor = std::io::Cursor::new(bytes);
-        zip_extract::extract(cursor, &runtime_dir, true)?;
-
-        println!("Java succesfully installed in AppData.");
+    // Erases java
+    if runtime_dir.exists() {
+        println!("Erasing old java...");
+        fs::remove_dir_all(&runtime_dir).await?;
     }
 
-    Ok(())
+    let client = reqwest::Client::new();
+    let bytes = client.get(url).send().await?.bytes().await?;
+
+    // Extract JDK
+    let cursor = std::io::Cursor::new(bytes);
+    zip_extract::extract(cursor, &runtime_dir, true)?;
+
+    println!("Java succesfully installed in AppData.");
+
+    Ok(full_name)
 }
 
-pub fn check_java_version(target_version: u32) -> bool {
+pub fn check_java_version() -> anyhow::Result<i32> {
     let output = Command::new("java")
         .arg("-version")
         .output();
@@ -380,21 +394,18 @@ pub fn check_java_version(target_version: u32) -> bool {
             // Java prints version on stderr (errors), not in stdout
             let version_info = String::from_utf8_lossy(&out.stderr);
 
-            // Search
-            let version_string = format!("\"{}\"", target_version);
-            let alt_version_string = format!(" {}", target_version);
+            let version_num: i32 = version_info
+                .trim()
+                .parse()
+                .unwrap_or(0);
 
-            if version_info.contains(&version_string) || version_info.contains(&alt_version_string) {
-                println!("Java {} detected in the system.", target_version);
-                return true;
-            }
+            println!("Java {} detected in the system.", version_info);
 
-            println!("Java found, but version {}.", target_version);
-            false
+            Ok(version_num)
         }
         Err(_) => {
-            println!("Java not found.");
-            false
+            Err(anyhow::anyhow!("{}", 0))
         }
     }
 }
+
