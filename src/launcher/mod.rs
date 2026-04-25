@@ -1,5 +1,5 @@
-use std::process::{Command, Child};
 use crate::models::VersionManifest;
+use std::process::{Child, Command};
 
 pub fn lanzar_juego(
     manifest: &VersionManifest,
@@ -7,9 +7,8 @@ pub fn lanzar_juego(
     java_bin_path: &std::path::Path,
     username: &str,
     classpath: String,
-    main_class: &String
+    main_class: &String,
 ) -> anyhow::Result<Child> {
-
     let mut cmd = Command::new(java_bin_path);
 
     // Argumentos de Memoria
@@ -28,7 +27,8 @@ pub fn lanzar_juego(
     cmd.arg("--gameDir").arg(base_path);
     cmd.arg("--assetsDir").arg(base_path.join("assets"));
     cmd.arg("--assetIndex").arg(&manifest.asset_index.id);
-    cmd.arg("--uuid").arg("00000000-0000-0000-0000-000000000000");
+    cmd.arg("--uuid")
+        .arg("00000000-0000-0000-0000-000000000000");
     cmd.arg("--accessToken").arg("0");
     cmd.arg("--userType").arg("mojang");
     cmd.arg("--versionType").arg("release");

@@ -1,10 +1,10 @@
+use crate::fabric_manifest_model::{FabricLibrary, FabricProfile};
+use crate::models::{AssetIndexContent, VersionManifest};
 use std::io::Cursor;
 use std::path::Path;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
-use zip_extract::extract;
-use crate::fabric_manifest_model::{FabricLibrary, FabricProfile};
-use crate::models::{AssetIndex, AssetIndexContent, VersionManifest}; // Structs
+use zip_extract::extract; // Structs
 
 pub async fn get_manifest() -> anyhow::Result<VersionManifest> {
     let url = "https://piston-meta.mojang.com/v1/packages/c9811ffdbcd77d79c12412836f21ed4e3c592102/1.20.1.json";
@@ -22,16 +22,22 @@ pub async fn get_manifest() -> anyhow::Result<VersionManifest> {
         return Err(anyhow::anyhow!("Server did not return text"));
     }
 
-    println!("Firsts 50 characters received: {}", &text[..std::cmp::min(50, text.len())]);
+    println!(
+        "Firsts 50 characters received: {}",
+        &text[..std::cmp::min(50, text.len())]
+    );
 
     let manifest: VersionManifest = serde_json::from_str(&text).map_err(|e| {
         // Error management
-        anyhow::anyhow!("Error parsing JSON: {} | Content: {}", e, &text[..std::cmp::min(100, text.len())])
+        anyhow::anyhow!(
+            "Error parsing JSON: {} | Content: {}",
+            e,
+            &text[..std::cmp::min(100, text.len())]
+        )
     })?;
 
     Ok(manifest)
 }
-
 
 pub async fn listar_librerias() -> anyhow::Result<()> {
     let manifest = get_manifest().await?;
@@ -50,7 +56,10 @@ pub async fn listar_librerias() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn download_libraries(manifest: &VersionManifest, base_path: &Path) -> anyhow::Result<()> {
+pub async fn download_libraries(
+    manifest: &VersionManifest,
+    base_path: &Path,
+) -> anyhow::Result<()> {
     let client = reqwest::Client::new();
     let libraries_dir = base_path.join("libraries");
 
@@ -59,8 +68,10 @@ pub async fn download_libraries(manifest: &VersionManifest, base_path: &Path) ->
     for lib in &manifest.libraries {
         // Only downloads when artifact is in
         if let Some(artifact) = &lib.downloads.artifact {
-
-            let relative_path = artifact.path.as_ref().ok_or_else(|| anyhow::anyhow!("Missing path"))?;
+            let relative_path = artifact
+                .path
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("Missing path"))?;
             let target_path = libraries_dir.join(relative_path);
 
             if let Some(parent) = target_path.parent() {
@@ -80,7 +91,10 @@ pub async fn download_libraries(manifest: &VersionManifest, base_path: &Path) ->
     Ok(())
 }
 
-pub async fn download_client(manifest: &VersionManifest, base_path: &std::path::Path) -> anyhow::Result<()> {
+pub async fn download_client(
+    manifest: &VersionManifest,
+    base_path: &std::path::Path,
+) -> anyhow::Result<()> {
     let client = reqwest::Client::new();
 
     let version_dir = base_path.join("versions").join(&manifest.id);
@@ -98,7 +112,10 @@ pub async fn download_client(manifest: &VersionManifest, base_path: &std::path::
         let mut file = fs::File::create(&target_path).await?;
         file.write_all(&bytes).await?;
 
-        println!("client.jar downloaded successfully ({} MB)", bytes.len() / 1_024 / 1_024);
+        println!(
+            "client.jar downloaded successfully ({} MB)",
+            bytes.len() / 1_024 / 1_024
+        );
     } else {
         println!("Client.jar already exists, skiping download.");
     }
@@ -110,7 +127,11 @@ pub fn gen_classpath(manifest: &VersionManifest, base_path: &std::path::Path) ->
     let mut cp_parts = Vec::new();
     let libraries_dir = base_path.join("libraries");
 
-    let separador_cp = if cfg!(target_os = "windows") { ";" } else { ":" };
+    let separador_cp = if cfg!(target_os = "windows") {
+        ";"
+    } else {
+        ":"
+    };
 
     // Add Vanilla libraries
     for lib in &manifest.libraries {
@@ -125,7 +146,10 @@ pub fn gen_classpath(manifest: &VersionManifest, base_path: &std::path::Path) ->
     }
 
     // Add client.jar at the end
-    let client_jar = base_path.join("versions").join(&manifest.id).join(format!("{}.jar", manifest.id));
+    let client_jar = base_path
+        .join("versions")
+        .join(&manifest.id)
+        .join(format!("{}.jar", manifest.id));
     if let Some(path_str) = client_jar.to_str() {
         cp_parts.push(path_str.to_string());
     }
@@ -135,7 +159,10 @@ pub fn gen_classpath(manifest: &VersionManifest, base_path: &std::path::Path) ->
 
 // ------------------------------------- ASSETS
 
-pub async fn download_assets(manifest: &VersionManifest, base_path: &std::path::Path) -> anyhow::Result<()> {
+pub async fn download_assets(
+    manifest: &VersionManifest,
+    base_path: &std::path::Path,
+) -> anyhow::Result<()> {
     let client = reqwest::Client::new();
     let assets_dir = base_path.join("assets");
     let objects_dir = assets_dir.join("objects");
@@ -162,9 +189,12 @@ pub async fn download_assets(manifest: &VersionManifest, base_path: &std::path::
     println!("Verifying {} assets...", index_data.objects.len());
 
     // Download loop
-    for (name, obj) in index_data.objects {
+    for (_name, obj) in index_data.objects {
         let prefix = &obj.hash[..2];
-        let url = format!("https://resources.download.minecraft.net/{}/{}", prefix, obj.hash);
+        let url = format!(
+            "https://resources.download.minecraft.net/{}/{}",
+            prefix, obj.hash
+        );
         let folder = objects_dir.join(prefix);
         let file_path = folder.join(&obj.hash);
 
@@ -217,14 +247,17 @@ pub fn gen_fabric_path(lib: &FabricLibrary) -> std::path::PathBuf {
     path
 }
 
-pub async fn download_fabric_libraries(manifest_fabric: &FabricProfile, base_path: &Path) -> anyhow::Result<()> {
+pub async fn download_fabric_libraries(
+    manifest_fabric: &FabricProfile,
+    base_path: &Path,
+) -> anyhow::Result<()> {
     let client = reqwest::Client::new();
     let libraries_dir = base_path.join("libraries");
 
     println!("Starting download of Fabric libraries...");
 
     for lib in &manifest_fabric.libraries {
-        let relative_path_buf = gen_fabric_path(&lib);
+        let relative_path_buf = gen_fabric_path(lib);
 
         // Native path for the OS
         let target_path = libraries_dir.join(&relative_path_buf);
@@ -258,12 +291,16 @@ pub async fn download_fabric_libraries(manifest_fabric: &FabricProfile, base_pat
 pub fn gen_cp_fabric(
     manifest_mc: &VersionManifest,
     manifest_fabric: &FabricProfile,
-    base_path: &std::path::Path
+    base_path: &std::path::Path,
 ) -> String {
     let mut cp_parts = Vec::new();
     let libraries_dir = base_path.join("libraries");
 
-    let classpath_separator = if cfg!(target_os = "windows") { ";" } else { ":" };
+    let classpath_separator = if cfg!(target_os = "windows") {
+        ";"
+    } else {
+        ":"
+    };
 
     // Process Vanilla libraries
     for lib in &manifest_mc.libraries {
@@ -290,7 +327,8 @@ pub fn gen_cp_fabric(
     }
 
     // Add Client JAR at the end
-    let client_jar = base_path.join("versions")
+    let client_jar = base_path
+        .join("versions")
         .join(&manifest_mc.id)
         .join(format!("{}.jar", manifest_mc.id));
 
@@ -314,8 +352,12 @@ pub async fn inject_modpack(url: &str, base_path: &std::path::Path) -> anyhow::R
     let mods_dir = base_path.join("mods");
     let config_dir = base_path.join("config");
 
-    if mods_dir.exists() { fs::remove_dir_all(&mods_dir).await?; }
-    if config_dir.exists() { fs::remove_dir_all(&config_dir).await?; }
+    if mods_dir.exists() {
+        fs::remove_dir_all(&mods_dir).await?;
+    }
+    if config_dir.exists() {
+        fs::remove_dir_all(&config_dir).await?;
+    }
 
     let target_dir = base_path;
     let buffer = Cursor::new(bytes);
@@ -327,7 +369,6 @@ pub async fn inject_modpack(url: &str, base_path: &std::path::Path) -> anyhow::R
     println!("Modpack injected successfully.");
     Ok(())
 }
-
 
 // --------------------------------- MULTIPLATFORM
 
@@ -346,18 +387,29 @@ pub fn base_path() -> std::path::PathBuf {
 
 // ----------------------------------------- JAVA
 
-pub async fn download_java_runtime(base_path: &std::path::Path, version: i64) -> anyhow::Result<String>  {
+pub async fn download_java_runtime(
+    base_path: &std::path::Path,
+    version: i64,
+) -> anyhow::Result<String> {
     let runtime_dir = base_path.join("runtime");
-    let java_exe = runtime_dir.join("bin/java.exe");
+    let _java_exe = runtime_dir.join("bin/java.exe");
 
     let (full_name, url) = match version {
         17 => (
             "jdk-17.0.5+8".to_string(),
-            "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.5%2B8/OpenJDK17U-debugimage_x64_windows_hotspot_17.0.5_8.zip"
+            if cfg!(target_os = "windows") {
+                "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.5%2B8/OpenJDK17U-jdk_x64_windows_hotspot_17.0.5_8.zip"
+            } else {
+                "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.5%2B8/OpenJDK17U-jdk_x64_linux_hotspot_17.0.5_8.tar.gz"
+            },
         ),
         21 => (
             "jdk-21.0.8+9".to_string(),
-            "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.zip"
+            if cfg!(target_os = "windows") {
+                "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.zip"
+            } else {
+                "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_x64_linux_hotspot_21.0.8_9.tar.gz"
+            },
         ),
         _ => return Err(anyhow::anyhow!("Version {} not supported", version)),
     };
@@ -374,8 +426,18 @@ pub async fn download_java_runtime(base_path: &std::path::Path, version: i64) ->
     let bytes = client.get(url).send().await?.bytes().await?;
 
     // Extract JDK
+    fs::create_dir_all(&runtime_dir).await?;
     let cursor = std::io::Cursor::new(bytes);
+
+    #[cfg(target_os = "windows")]
     zip_extract::extract(cursor, &runtime_dir, true)?;
+
+    #[cfg(target_os = "linux")]
+    {
+        let decoder = flate2::read::GzDecoder::new(cursor);
+        let mut archive = tar::Archive::new(decoder);
+        archive.unpack(&runtime_dir)?;
+    }
 
     println!("Java succesfully installed in AppData.");
 
@@ -383,26 +445,20 @@ pub async fn download_java_runtime(base_path: &std::path::Path, version: i64) ->
 }
 
 pub fn check_java_version() -> anyhow::Result<i32> {
-    let output = Command::new("java")
-        .arg("-version")
-        .output();
+    let output = Command::new("java").arg("-version").output();
+    println!("Checking Java version...");
 
     match output {
         Ok(out) => {
             // Java prints version on stderr (errors), not in stdout
             let version_info = String::from_utf8_lossy(&out.stderr);
 
-            let version_num: i32 = version_info
-                .trim()
-                .parse()
-                .unwrap_or(0);
+            let version_num: i32 = version_info.trim().parse().unwrap_or(0);
 
             println!("Java {} detected in the system.", version_info);
 
             Ok(version_num)
         }
-        Err(_) => {
-            Err(anyhow::anyhow!("{}", 0))
-        }
+        Err(_) => Err(anyhow::anyhow!("{}", 0)),
     }
 }

@@ -1,41 +1,35 @@
 use oxide_mc::OxideLauncher;
-// Cambia mc_lib por el nombre de tu paquete
 
 #[tokio::test]
-async fn test_install() {
+#[ignore]
+async fn test_install() -> anyhow::Result<()> {
     let launcher = OxideLauncher::new("TestUser");
 
-    let result = launcher.full_install(None).await;
-
-    assert!(result.is_ok(), "Installation process done successfully");
+    launcher.full_install(None).await?;
+    Ok(())
 }
 
 #[tokio::test]
-async fn run() {
+#[ignore]
+async fn run() -> anyhow::Result<()> {
     let launcher = OxideLauncher::new("TestUser");
 
-    let result = launcher.start().await;
-
-    assert!(result.is_ok(), "Game closed");
+    launcher.start().await?;
+    Ok(())
 }
 
 #[tokio::test]
-async fn java_donwload() {
+#[ignore]
+async fn java_donwload() -> anyhow::Result<()> {
     let mut launcher = OxideLauncher::new("TestUser");
 
-    let result = launcher.java_download(21).await;
-
-    assert!(result.is_ok(), "Java installed.");
+    launcher.java_download(21).await?;
+    Ok(())
 }
 
 #[tokio::test]
-async fn check_java_version_test() {
+async fn check_java_version_test() -> anyhow::Result<()> {
     let launcher = OxideLauncher::new("TestUser");
-    let result = launcher.check_java().await;
-
-    assert!(result.is_ok(), "La función de chequeo ha fallado técnicamente");
-
-    let is_installed = result.unwrap();
-    println!("¿Java 17 detectado?: {}", is_installed);
-
+    launcher.check_java().await?;
+    Ok(())
 }

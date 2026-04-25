@@ -1,12 +1,12 @@
-use std::path::PathBuf;
-use anyhow::Result;
 use crate::functions::{check_java_version, download_java_runtime};
+use anyhow::Result;
+use std::path::PathBuf;
 
-pub mod models;
+pub mod fabric_manifest_model;
 pub mod functions;
 pub mod launcher;
-pub mod fabric_manifest_model;
 mod manifest_indexes;
+pub mod models;
 
 pub struct LauncherConfig {
     pub game_path: PathBuf,
@@ -28,21 +28,24 @@ pub struct JavaInfo {
     pub full_name: String,
 }
 
-
 impl OxideLauncher {
     pub fn new(username: &str) -> Self {
         let base = functions::base_path();
+        println!("base path: {}", base.display());
 
-        let java_installed = functions::check_java_version().unwrap();
+        let _java_installed = functions::check_java_version().unwrap();
+        
+        let java_path = base.join("runtime").join("bin");
 
-        if (java_installed == 0) {
-
-        }
+        #[cfg(target_os = "windows")]
+        let java_path = java_path.join("java.exe");
+        #[cfg(not(target_os = "windows"))]
+        let java_path = java_path.join("java");
 
         Self {
             settings: LauncherConfig {
                 game_path: base.clone(),
-                java_path: base.join("runtime").join("bin").join("java.exe"),
+                java_path,
                 username: username.to_string(),
             },
         }
@@ -69,8 +72,8 @@ impl OxideLauncher {
         let manifest = functions::get_manifest().await?;
         let fabric_manifest = functions::get_fabric_manifest().await?;
 
-        let game_version = &manifest.id.clone();
-        let loader_version = &fabric_manifest.inherits_from.clone();
+        let _game_version = &manifest.id.clone();
+        let _loader_version = &fabric_manifest.inherits_from.clone();
 
         let java_version: &i64 = &manifest.java_version.major_version.clone();
 
@@ -85,7 +88,10 @@ impl OxideLauncher {
             functions::inject_modpack(url, &self.settings.game_path).await?;
         }
 
-        println!("Install java {} before running with command java_download!.", java_version);
+        println!(
+            "Install java {} before running with command java_download!.",
+            java_version
+        );
 
         println!("All done successfully!.");
         Ok(*java_version)
@@ -94,9 +100,9 @@ impl OxideLauncher {
     pub async fn start(&self) -> Result<std::process::Child> {
         if !self.settings.java_path.exists() {
             return Err(anyhow::anyhow!(
-            "Java not found on path: {:?}",
-            self.settings.java_path
-        ));
+                "Java not found on path: {:?}",
+                self.settings.java_path
+            ));
         }
 
         let manifest = functions::get_manifest().await?;
@@ -111,20 +117,22 @@ impl OxideLauncher {
             &self.settings.java_path,
             &self.settings.username,
             cp,
-            main_class
+            main_class,
         )
     }
 
     pub async fn java_download(&mut self, version: i64) -> Result<()> {
-        
         println!("Java download started...");
 
-        let full_name = download_java_runtime(&self.settings.game_path, version).await?;
+        let _full_name = download_java_runtime(&self.settings.game_path, version).await?;
 
-        let nuevo_path = self.settings.game_path
-            .join("runtime")
-            .join("bin")
-            .join(if cfg!(target_os = "windows") { "java.exe" } else { "java" });
+        let nuevo_path = self.settings.game_path.join("runtime").join("bin").join(
+            if cfg!(target_os = "windows") {
+                "java.exe"
+            } else {
+                "java"
+            },
+        );
 
         self.settings.java_path = nuevo_path;
 
@@ -133,8 +141,6 @@ impl OxideLauncher {
     }
 
     pub async fn check_java(&self) -> anyhow::Result<i32> {
-
-        Ok(check_java_version()?)
-
+        check_java_version()
     }
 }

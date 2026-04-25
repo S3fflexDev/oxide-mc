@@ -1,5 +1,5 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -151,7 +151,6 @@ pub struct Library {
     pub name: String,
     pub rules: Option<Vec<LibraryRule>>,
 }
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LibraryDownloads {
