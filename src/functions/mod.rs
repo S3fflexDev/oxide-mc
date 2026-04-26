@@ -25,13 +25,13 @@ fn extract_zip(data: &[u8], target_dir: &Path, strip_toplevel: bool) -> anyhow::
         let out_path = target_dir.join(&path);
         if file.is_dir() {
             std::fs::create_dir_all(&out_path)?;
-        } else {
-            if let Some(parent) = out_path.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
-            let mut out_file = std::fs::File::create(&out_path)?;
-            std::io::copy(&mut file, &mut out_file)?;
+            continue;
         }
+        if let Some(parent) = out_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let mut out_file = std::fs::File::create(&out_path)?;
+        std::io::copy(&mut file, &mut out_file)?;
     }
     Ok(())
 }
@@ -68,7 +68,6 @@ pub async fn get_manifest() -> anyhow::Result<VersionManifest> {
     );
 
     let manifest: VersionManifest = serde_json::from_str(&text).map_err(|e| {
-        // Error management
         anyhow::anyhow!(
             "Error parsing JSON: {} | Content: {}",
             e,
@@ -106,25 +105,26 @@ pub async fn download_libraries(
     println!("Downloading libraries in: {:?}", libraries_dir);
 
     for lib in &manifest.libraries {
-        // Only downloads when artifact is in
-        if let Some(artifact) = &lib.downloads.artifact {
-            let relative_path = artifact
-                .path
-                .as_ref()
-                .ok_or_else(|| anyhow::anyhow!("Missing path"))?;
-            let target_path = libraries_dir.join(relative_path);
+        let Some(artifact) = &lib.downloads.artifact else {
+            continue;
+        };
+        let relative_path = artifact
+            .path
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Missing path"))?;
+        let target_path = libraries_dir.join(relative_path);
 
-            if let Some(parent) = target_path.parent() {
-                fs::create_dir_all(parent).await?;
-            }
-
-            if !target_path.exists() {
-                println!("Downloading: {}", lib.name);
-                let bytes = client.get(&artifact.url).send().await?.bytes().await?;
-                let mut file = fs::File::create(&target_path).await?;
-                file.write_all(&bytes).await?;
-            }
+        if let Some(parent) = target_path.parent() {
+            fs::create_dir_all(parent).await?;
         }
+
+        if target_path.exists() {
+            continue;
+        }
+        println!("Downloading: {}", lib.name);
+        let bytes = client.get(&artifact.url).send().await?.bytes().await?;
+        let mut file = fs::File::create(&target_path).await?;
+        file.write_all(&bytes).await?;
     }
 
     println!("All libraries are ready!");
@@ -142,46 +142,52 @@ pub async fn download_client(
 
     fs::create_dir_all(&version_dir).await?;
 
-    // Download file
-    if !target_path.exists() {
-        println!("Downloading game code (client.jar)...");
-
-        let url = &manifest.downloads.client.url;
-        let bytes = client.get(url).send().await?.bytes().await?;
-
-        let mut file = fs::File::create(&target_path).await?;
-        file.write_all(&bytes).await?;
-
-        println!(
-            "client.jar downloaded successfully ({} MB)",
-            bytes.len() / 1_024 / 1_024
-        );
-    } else {
-        println!("Client.jar already exists, skiping download.");
+    if target_path.exists() {
+        println!("Client.jar already exists, skipping download.");
+        return Ok(());
     }
 
+    println!("Downloading game code (client.jar)...");
+    let url = &manifest.downloads.client.url;
+    let bytes = client.get(url).send().await?.bytes().await?;
+
+    let mut file = fs::File::create(&target_path).await?;
+    file.write_all(&bytes).await?;
+
+    println!(
+        "client.jar downloaded successfully ({} MB)",
+        bytes.len() / 1_024 / 1_024
+    );
+
     Ok(())
+}
+
+fn collect_vanilla_cp(
+    libraries: &[crate::models::Library],
+    libraries_dir: &Path,
+    cp_parts: &mut Vec<String>,
+) {
+    for lib in libraries {
+        let Some(artifact) = &lib.downloads.artifact else {
+            continue;
+        };
+        let Some(rel_path) = &artifact.path else {
+            continue;
+        };
+        let full_path = libraries_dir.join(rel_path);
+        let Some(path_str) = full_path.to_str() else {
+            continue;
+        };
+        cp_parts.push(path_str.to_string());
+    }
 }
 
 pub fn gen_classpath(manifest: &VersionManifest, base_path: &std::path::Path) -> String {
     let mut cp_parts = Vec::new();
     let libraries_dir = base_path.join("libraries");
 
-    let separador_cp = CLASSPATH_SEPARATOR;
+    collect_vanilla_cp(&manifest.libraries, &libraries_dir, &mut cp_parts);
 
-    // Add Vanilla libraries
-    for lib in &manifest.libraries {
-        if let Some(artifact) = &lib.downloads.artifact {
-            if let Some(rel_path) = &artifact.path {
-                let absolute_path = libraries_dir.join(rel_path);
-                if let Some(path_str) = absolute_path.to_str() {
-                    cp_parts.push(path_str.to_string());
-                }
-            }
-        }
-    }
-
-    // Add client.jar at the end
     let client_jar = base_path
         .join("versions")
         .join(&manifest.id)
@@ -190,7 +196,7 @@ pub fn gen_classpath(manifest: &VersionManifest, base_path: &std::path::Path) ->
         cp_parts.push(path_str.to_string());
     }
 
-    cp_parts.join(separador_cp)
+    cp_parts.join(CLASSPATH_SEPARATOR)
 }
 
 // ------------------------------------- ASSETS
@@ -213,7 +219,10 @@ pub async fn download_assets(
     let index_content = if index_path.exists() {
         fs::read_to_string(&index_path).await?
     } else {
-        println!("Downloading assets index (5.json)...");
+        println!(
+            "Downloading assets index ({}.json)...",
+            manifest.asset_index.id
+        );
         let content = client.get(index_url).send().await?.text().await?;
         fs::write(&index_path, &content).await?;
         content
@@ -246,11 +255,13 @@ pub async fn download_assets(
                 "https://resources.download.minecraft.net/{}/{}",
                 prefix, obj.hash
             );
-            if let Ok(res) = client.get(&url).send().await {
-                if let Ok(bytes) = res.bytes().await {
-                    let _ = fs::write(&file_path, &bytes).await;
-                }
-            }
+            let Ok(res) = client.get(&url).send().await else {
+                return;
+            };
+            let Ok(bytes) = res.bytes().await else {
+                return;
+            };
+            let _ = fs::write(&file_path, &bytes).await;
         });
     }
 
@@ -306,10 +317,8 @@ pub async fn download_fabric_libraries(
     for lib in &manifest_fabric.libraries {
         let relative_path_buf = gen_fabric_path(lib);
 
-        // Native path for the OS
         let target_path = libraries_dir.join(&relative_path_buf);
 
-        // URL path (always forward slashes)
         let url_path = relative_path_buf.to_string_lossy().replace('\\', "/");
         let download_url = format!("{}{}", lib.url, url_path);
 
@@ -317,18 +326,19 @@ pub async fn download_fabric_libraries(
             fs::create_dir_all(parent).await?;
         }
 
-        if !target_path.exists() {
-            println!("Downloading Fabric Lib: {}", lib.name);
-
-            let response = client.get(&download_url).send().await?;
-            if response.status().is_success() {
-                let bytes = response.bytes().await?;
-                let mut file = fs::File::create(&target_path).await?;
-                file.write_all(&bytes).await?;
-            } else {
-                println!("Error 404 in Fabric Lib: {}", download_url);
-            }
+        if target_path.exists() {
+            continue;
         }
+
+        println!("Downloading Fabric Lib: {}", lib.name);
+        let response = client.get(&download_url).send().await?;
+        if !response.status().is_success() {
+            println!("Error 404 in Fabric Lib: {}", download_url);
+            continue;
+        }
+        let bytes = response.bytes().await?;
+        let mut file = fs::File::create(&target_path).await?;
+        file.write_all(&bytes).await?;
     }
 
     println!("Fabric libraries downloaded successfully!");
@@ -343,43 +353,24 @@ pub fn gen_cp_fabric(
     let mut cp_parts = Vec::new();
     let libraries_dir = base_path.join("libraries");
 
-    let classpath_separator = CLASSPATH_SEPARATOR;
+    collect_vanilla_cp(&manifest_mc.libraries, &libraries_dir, &mut cp_parts);
 
-    // Process Vanilla libraries
-    for lib in &manifest_mc.libraries {
-        if let Some(artifact) = &lib.downloads.artifact {
-            if let Some(path) = &artifact.path {
-                let full_path = libraries_dir.join(path);
-                if let Some(path_str) = full_path.to_str() {
-                    cp_parts.push(path_str.to_string());
-                }
-            }
-        }
-    }
-
-    // Process Fabric libraries
     for lib in &manifest_fabric.libraries {
-        let relative_path_buf = gen_fabric_path(lib);
-
-        // PathBuf handles joining natively for each OS
-        let full_path = libraries_dir.join(relative_path_buf);
-
+        let full_path = libraries_dir.join(gen_fabric_path(lib));
         if let Some(path_str) = full_path.to_str() {
             cp_parts.push(path_str.to_string());
         }
     }
 
-    // Add Client JAR at the end
     let client_jar = base_path
         .join("versions")
         .join(&manifest_mc.id)
         .join(format!("{}.jar", manifest_mc.id));
-
     if let Some(path_str) = client_jar.to_str() {
         cp_parts.push(path_str.to_string());
     }
 
-    cp_parts.join(classpath_separator)
+    cp_parts.join(CLASSPATH_SEPARATOR)
 }
 
 // --------------------------------- INJECT MODPACK
