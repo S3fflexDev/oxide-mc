@@ -36,9 +36,6 @@ pub(crate) fn extract_zip(data: &[u8], target_dir: &Path, strip_toplevel: bool) 
 // --------------------------------- MULTIPLATFORM
 
 use directories::ProjectDirs;
-use std::process::Command;
-use crate::mc::get_manifest;
-use crate::net::get_http_client;
 
 pub fn base_path() -> std::path::PathBuf {
     // Win: C:\Users\Nombre\AppData\Roaming\OxideMC\data
