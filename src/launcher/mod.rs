@@ -1,7 +1,7 @@
-use crate::models::VersionManifest;
+use crate::mc::models::VersionManifest;
 use std::process::{Child, Command};
 
-pub fn lanzar_juego(
+pub fn launch_game(
     manifest: &VersionManifest,
     base_path: &std::path::Path,
     java_bin_path: &std::path::Path,

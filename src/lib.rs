@@ -1,12 +1,18 @@
-use crate::functions::{check_java_version, download_java_runtime, JAVA_EXECUTABLE};
+use crate::java::{check_java_version, download_java_runtime};
 use anyhow::Result;
 use std::path::PathBuf;
+use crate::platform::JAVA_EXECUTABLE;
 
-pub mod fabric_manifest_model;
+pub mod fabric;
 pub mod functions;
 pub mod launcher;
-mod manifest_indexes;
-pub mod models;
+mod index;
+pub mod net;
+pub mod mc;
+mod assets;
+mod modpack;
+mod java;
+mod platform;
 
 pub struct LauncherConfig {
     pub game_path: PathBuf,
@@ -33,7 +39,7 @@ impl OxideLauncher {
         let base = functions::base_path();
         println!("base path: {}", base.display());
 
-        let _java_installed = functions::check_java_version().unwrap();
+        let _java_installed = java::check_java_version().unwrap();
 
         let java_path = base.join("runtime").join("bin").join(JAVA_EXECUTABLE);
 
@@ -65,23 +71,28 @@ impl OxideLauncher {
         println!("Beggining installation on: {:?}", self.settings.game_path);
 
         // Get manifests
-        let manifest = functions::get_manifest().await?;
-        let fabric_manifest = functions::get_fabric_manifest().await?;
+        let manifest = mc::get_manifest().await?;
+        let fabric_manifest = fabric::get_fabric_manifest().await?;
 
         let _game_version = &manifest.id.clone();
         let _loader_version = &fabric_manifest.inherits_from.clone();
 
         let java_version: &i64 = &manifest.java_version.major_version.clone();
 
-        // Downloads
-        functions::download_libraries(&manifest, &self.settings.game_path).await?;
-        functions::download_fabric_libraries(&fabric_manifest, &self.settings.game_path).await?;
-        functions::download_client(&manifest, &self.settings.game_path).await?;
-        functions::download_assets(&manifest, &self.settings.game_path).await?;
+        // Vanilla
+        mc::download_libraries(&manifest, &self.settings.game_path).await?;
+        mc::download_client(&manifest, &self.settings.game_path).await?;
+
+        // Assets
+        assets::download_assets(&manifest, &self.settings.game_path).await?;
+
+        // Fabric
+        fabric::download_fabric_libraries(&fabric_manifest, &self.settings.game_path).await?;
+
 
         // Inyect modpack
         if let Some(url) = modpack_url {
-            functions::inject_modpack(url, &self.settings.game_path).await?;
+            modpack::inject_modpack(url, &self.settings.game_path).await?;
         }
 
         println!(
@@ -101,13 +112,13 @@ impl OxideLauncher {
             ));
         }
 
-        let manifest = functions::get_manifest().await?;
-        let fabric_manifest = functions::get_fabric_manifest().await?;
+        let manifest = mc::get_manifest().await?;
+        let fabric_manifest = fabric::get_fabric_manifest().await?;
 
-        let cp = functions::gen_cp_fabric(&manifest, &fabric_manifest, &self.settings.game_path);
+        let cp = fabric::gen_cp_fabric(&manifest, &fabric_manifest, &self.settings.game_path);
         let main_class = &fabric_manifest.main_class;
 
-        launcher::lanzar_juego(
+        launcher::launch_game(
             &manifest,
             &self.settings.game_path,
             &self.settings.java_path,

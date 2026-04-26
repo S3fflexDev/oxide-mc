@@ -23,7 +23,7 @@ async fn run() -> anyhow::Result<()> {
 async fn java_donwload() -> anyhow::Result<()> {
     let mut launcher = OxideLauncher::new("TestUser");
 
-    launcher.java_download(17).await?;
+    launcher.java_download(21).await?;
     Ok(())
 }
 
