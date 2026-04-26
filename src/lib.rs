@@ -1,18 +1,23 @@
 use crate::java::{check_java_version, download_java_runtime};
 use anyhow::Result;
 use std::path::PathBuf;
+use sha1::digest::typenum::Mod;
+use crate::functions::base_path;
 use crate::platform::JAVA_EXECUTABLE;
+use crate::state::load_profile;
+use crate::state::models::{InstallationProfile, ModLoader};
 
 pub mod fabric;
 pub mod functions;
 pub mod launcher;
-mod index;
+mod version_index;
 pub mod net;
 pub mod mc;
 mod assets;
 mod modpack;
 mod java;
 mod platform;
+pub mod state;
 
 pub struct LauncherConfig {
     pub game_path: PathBuf,
@@ -67,12 +72,19 @@ impl OxideLauncher {
         }
     }
 
-    pub async fn full_install(&self, modpack_url: Option<&str>) -> Result<i64> {
+    pub async fn full_install(
+        &self,
+        modpack_url: Option<&str>,
+        version: &str,
+        modloader: ModLoader
+    ) -> Result<i64> {
         println!("Beggining installation on: {:?}", self.settings.game_path);
 
         // Get manifests
         let manifest = mc::get_manifest().await?;
         let fabric_manifest = fabric::get_fabric_manifest().await?;
+
+        let base_path = base_path();
 
         let _game_version = &manifest.id.clone();
         let _loader_version = &fabric_manifest.inherits_from.clone();
@@ -86,9 +98,37 @@ impl OxideLauncher {
         // Assets
         assets::download_assets(&manifest, &self.settings.game_path).await?;
 
-        // Fabric
-        fabric::download_fabric_libraries(&fabric_manifest, &self.settings.game_path).await?;
+        let mut main_class: String = manifest.main_class.clone();
 
+        let mut final_classpath: String = mc::gen_classpath(&manifest, &self.settings.game_path);
+
+        match modloader {
+            ModLoader::Vanilla => {
+                println!("Vanilla installation complete.");
+            }
+            ModLoader::Fabric => {
+                println!("Installing Fabric...");
+                let fabric_manifest = fabric::get_fabric_manifest().await?;
+                fabric::download_fabric_libraries(&fabric_manifest, &self.settings.game_path).await?;
+                main_class = fabric_manifest.main_class.clone();
+                final_classpath = fabric::gen_cp_fabric(&manifest, &fabric_manifest, &base_path);
+                println!("Fabric installation complete.");
+            }
+            ModLoader::NeoForge => {
+                println!("Installing NeoForge...");
+                println!("Neoforge is a placeholder :).");
+            }
+        }
+
+        let profile = InstallationProfile {
+            minecraft_version: "1.21.1".to_string(),
+            modloader_type: "fabric".to_string(),
+            modloader_version: Some(fabric_manifest.id.clone()),
+            main_class,
+            classpath: final_classpath
+        };
+
+        state::save_profile(&profile)?;
 
         // Inyect modpack
         if let Some(url) = modpack_url {
@@ -115,16 +155,27 @@ impl OxideLauncher {
         let manifest = mc::get_manifest().await?;
         let fabric_manifest = fabric::get_fabric_manifest().await?;
 
-        let cp = fabric::gen_cp_fabric(&manifest, &fabric_manifest, &self.settings.game_path);
-        let main_class = &fabric_manifest.main_class;
+        // let cp = mc::gen_classpath(&manifest, &self.settings.game_path);
+        // let main_class = &manifest.main_class;
+
+        let profile = match state::load_profile()? {
+            Some(p) => {
+                println!("Found installation profile: {}", p.minecraft_version);
+                p
+            },
+            None => {
+                // Si no hay perfil, no hay nada que hacer. Error claro.
+                return Err(anyhow::anyhow!("No installation found. Please run the 'install' command first."));
+            }
+        };
 
         launcher::launch_game(
             &manifest,
             &self.settings.game_path,
             &self.settings.java_path,
             &self.settings.username,
-            cp,
-            main_class,
+            profile.classpath,
+            &profile.main_class,
         )
     }
 

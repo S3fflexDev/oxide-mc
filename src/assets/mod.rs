@@ -21,7 +21,7 @@ pub async fn download_assets(
         fs::read_to_string(&index_path).await?
     } else {
         println!(
-            "Downloading assets index ({}.json)...",
+            "Downloading assets version_index ({}.json)...",
             manifest.asset_index.id
         );
         let content = client.get(index_url).send().await?.text().await?;
@@ -30,7 +30,7 @@ pub async fn download_assets(
     };
 
     let index_data: AssetIndexContent = serde_json::from_str(&index_content)
-        .map_err(|e| anyhow::anyhow!("Error parsing assets index: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Error parsing assets version_index: {}", e))?;
 
     println!("Verifying {} assets...", index_data.objects.len());
 
