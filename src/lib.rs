@@ -81,7 +81,7 @@ impl OxideLauncher {
         println!("Beggining installation on: {:?}", self.settings.game_path);
 
         // Get manifests
-        let manifest = mc::get_manifest().await?;
+        let manifest = mc::get_manifest(version).await?;
         let fabric_manifest = fabric::get_fabric_manifest().await?;
 
         let base_path = base_path();
@@ -102,6 +102,8 @@ impl OxideLauncher {
 
         let mut final_classpath: String = mc::gen_classpath(&manifest, &self.settings.game_path);
 
+
+
         match modloader {
             ModLoader::Vanilla => {
                 println!("Vanilla installation complete.");
@@ -121,9 +123,9 @@ impl OxideLauncher {
         }
 
         let profile = InstallationProfile {
-            minecraft_version: "1.21.1".to_string(),
-            modloader_type: "fabric".to_string(),
-            modloader_version: Some(fabric_manifest.id.clone()),
+            minecraft_version: manifest.id.clone(),
+            modloader_type: "vanilla".to_string(),
+            modloader_version: None,
             main_class,
             classpath: final_classpath
         };
@@ -152,12 +154,6 @@ impl OxideLauncher {
             ));
         }
 
-        let manifest = mc::get_manifest().await?;
-        let fabric_manifest = fabric::get_fabric_manifest().await?;
-
-        // let cp = mc::gen_classpath(&manifest, &self.settings.game_path);
-        // let main_class = &manifest.main_class;
-
         let profile = match state::load_profile()? {
             Some(p) => {
                 println!("Found installation profile: {}", p.minecraft_version);
@@ -168,6 +164,13 @@ impl OxideLauncher {
                 return Err(anyhow::anyhow!("No installation found. Please run the 'install' command first."));
             }
         };
+
+
+        let manifest = mc::get_manifest(&*profile.minecraft_version).await?;
+        let fabric_manifest = fabric::get_fabric_manifest().await?;
+
+        // let cp = mc::gen_classpath(&manifest, &self.settings.game_path);
+        // let main_class = &manifest.main_class;
 
         launcher::launch_game(
             &manifest,

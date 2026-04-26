@@ -5,9 +5,14 @@ use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use crate::mc::models::VersionManifest;
 use crate::net::get_http_client;
+use crate::version_index;
 
-pub async fn get_manifest() -> anyhow::Result<VersionManifest> {
-    let url = "https://piston-meta.mojang.com/v1/packages/900a4d828d608162c1061113b1176e656000cb45/1.21.1.json";
+pub async fn get_manifest(version: &str) -> anyhow::Result<VersionManifest> {
+    println!("Getting manifest for version: {}", version);
+
+    let url = version_index::find_version_manifest_url(version).await?;
+
+    println!("{}", url.as_str());
 
     let client = get_http_client();
 
@@ -33,24 +38,6 @@ pub async fn get_manifest() -> anyhow::Result<VersionManifest> {
     })?;
 
     Ok(manifest)
-}
-
-
-pub async fn listar_librerias() -> anyhow::Result<()> {
-    let manifest = get_manifest().await?;
-
-    for lib in manifest.libraries {
-        if let Some(artifact) = lib.downloads.artifact {
-            println!("Library: {}", lib.name);
-            println!("  -> URL: {}", artifact.url);
-            if let Some(path) = artifact.path {
-                println!("  -> Path: {}", path);
-            }
-        } else {
-            println!("Library with no artifact: {}", lib.name);
-        }
-    }
-    Ok(())
 }
 
 pub async fn download_libraries(
