@@ -1,11 +1,5 @@
-use crate::fabric::models::{FabricLibrary, FabricProfile};
-use crate::mc::models::{AssetIndexContent, VersionManifest};
-
 
 use std::path::Path;
-use tokio::fs;
-use tokio::io::AsyncWriteExt;
-use crate::{mc, net};
 
 pub(crate) fn extract_zip(data: &[u8], target_dir: &Path, strip_toplevel: bool) -> anyhow::Result<()> {
     let cursor = std::io::Cursor::new(data);
