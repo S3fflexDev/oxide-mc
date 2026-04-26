@@ -11,17 +11,17 @@ pub fn lanzar_juego(
 ) -> anyhow::Result<Child> {
     let mut cmd = Command::new(java_bin_path);
 
-    // Argumentos de Memoria
+    // Memory arguments
     cmd.arg("-Xmx2G");
     cmd.arg("-Xms512M");
 
-    // El Classpath
+    // Classpath
     cmd.arg("-cp").arg(classpath);
 
-    // Clase Principal (la sacamos del JSON)
+    // Main class
     cmd.arg(main_class);
 
-    // Argumentos de Minecraft (Lo básico para que arranque)
+    // Minecraft arguments
     cmd.arg("--username").arg(username);
     cmd.arg("--version").arg(&manifest.id);
     cmd.arg("--gameDir").arg(base_path);

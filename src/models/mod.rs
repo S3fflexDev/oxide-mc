@@ -154,7 +154,7 @@ pub struct Library {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LibraryDownloads {
-    // CAMBIO AQUÍ: artifact debe ser Option porque no todas las librerías lo tienen
+    // Not all libraries have an artifact
     pub artifact: Option<ClientMappingsClass>,
 }
 
@@ -164,10 +164,10 @@ pub struct LibraryRule {
     pub os: FluffyOs,
 }
 
-// También asegúrate de que FluffyOs sea robusto
+// FluffyOs fields are optional for robustness
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FluffyOs {
-    pub name: Option<Name>, // Añadido Option por si acaso
+    pub name: Option<Name>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
