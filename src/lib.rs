@@ -82,7 +82,7 @@ impl OxideLauncher {
 
         // Get manifests
         let manifest = mc::get_manifest(version).await?;
-        let fabric_manifest = fabric::get_fabric_manifest().await?;
+        let fabric_manifest = fabric::get_fabric_manifest(version).await?;
 
         let base_path = base_path();
 
@@ -101,16 +101,13 @@ impl OxideLauncher {
         let mut main_class: String = manifest.main_class.clone();
 
         let mut final_classpath: String = mc::gen_classpath(&manifest, &self.settings.game_path);
-
-
-
+        
         match modloader {
             ModLoader::Vanilla => {
                 println!("Vanilla installation complete.");
             }
             ModLoader::Fabric => {
                 println!("Installing Fabric...");
-                let fabric_manifest = fabric::get_fabric_manifest().await?;
                 fabric::download_fabric_libraries(&fabric_manifest, &self.settings.game_path).await?;
                 main_class = fabric_manifest.main_class.clone();
                 final_classpath = fabric::gen_cp_fabric(&manifest, &fabric_manifest, &base_path);
@@ -167,7 +164,7 @@ impl OxideLauncher {
 
 
         let manifest = mc::get_manifest(&*profile.minecraft_version).await?;
-        let fabric_manifest = fabric::get_fabric_manifest().await?;
+        let fabric_manifest = fabric::get_fabric_manifest(&profile.minecraft_version).await?;
 
         // let cp = mc::gen_classpath(&manifest, &self.settings.game_path);
         // let main_class = &manifest.main_class;

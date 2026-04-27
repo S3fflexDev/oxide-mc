@@ -1,6 +1,19 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+// Example code that deserializes and serializes the model.
+// extern crate serde;
+// #[macro_use]
+// extern crate serde_derive;
+// extern crate serde_json;
+//
+// use generated_module::Welcome;
+//
+// fn main() {
+//     let json = r#"{"answer": 42}"#;
+//     let model: Welcome = serde_json::from_str(&json).unwrap();
+// }
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VersionManifest {
@@ -12,7 +25,7 @@ pub struct VersionManifest {
     pub id: String,
     pub java_version: JavaVersion,
     pub libraries: Vec<Library>,
-    pub logging: Option<Logging>, // Hecho Option porque a veces cambia
+    pub logging: Logging,
     pub main_class: String,
     pub minimum_launcher_version: i64,
     pub release_time: String,
@@ -46,11 +59,10 @@ pub struct GameRule {
     pub features: Features,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Action {
     Allow,
-    Disallow,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -86,7 +98,7 @@ pub struct JvmClass {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JvmRule {
     pub action: Action,
-    pub os: Option<PurpleOs>,
+    pub os: PurpleOs,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -155,20 +167,20 @@ pub struct Library {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LibraryDownloads {
-    // Not all libraries have an artifact
     pub artifact: Option<ClientMappingsClass>,
+    #[serde(default)]
+    pub classifiers: HashMap<String, ClientMappingsClass>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LibraryRule {
     pub action: Action,
-    pub os: Option<FluffyOs>,
+    pub os: FluffyOs,
 }
 
-// FluffyOs fields are optional for robustness
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FluffyOs {
-    pub name: Option<Name>,
+    pub name: Name,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

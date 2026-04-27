@@ -5,7 +5,7 @@ use oxide_mc::OxideLauncher;
 async fn test_install() -> anyhow::Result<()> {
     let launcher = OxideLauncher::new("TestUser");
 
-    launcher.full_install(None, "1.20.1", oxide_mc::state::models::ModLoader::Vanilla).await?;
+    launcher.full_install(None, "1.20.1", oxide_mc::state::models::ModLoader::Fabric).await?;
     Ok(())
 }
 

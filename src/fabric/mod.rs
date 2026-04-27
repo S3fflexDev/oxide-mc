@@ -7,15 +7,24 @@ use crate::mc;
 use crate::mc::models::VersionManifest;
 use crate::net::get_http_client;
 
-pub(crate) mod models;
+use anyhow::Result;
+use crate::fabric::index_model::{FabricLoaderVersion, FabricLoaderVersions};
+use crate::version_index::find_version_manifest_url;
 
-pub async fn get_fabric_manifest() -> anyhow::Result<FabricProfile> {
+const FABRIC_LOADERS_URL_INDEX: &str = "https://meta.fabricmc.net/v2/versions/loader/";
+
+const FABRIC_LOADER_URL_BASE: &str = "https://meta.fabricmc.net/v2/versions/loader/"; // Add /profile/json at end
+
+
+pub(crate) mod models;
+mod index_model;
+
+pub async fn get_fabric_manifest(version: &str) -> anyhow::Result<FabricProfile> {
 
     // https://meta.fabricmc.net/v2/versions/loader/1.20.1/0.19.2/profile/json
-    let url = "https://meta.fabricmc.net/v2/versions/loader/1.21.1/0.19.2/profile/json";
+    let url = find_latest_stable_fabric_loader_url(version).await?; // I'm dumb ^^
 
     let client = get_http_client();
-
     let response = client.get(url).send().await?;
 
     let manifest: FabricProfile = response.json().await?;
@@ -107,4 +116,37 @@ pub fn gen_cp_fabric(
     }
 
     cp_parts.join(CLASSPATH_SEPARATOR)
+}
+
+pub async fn find_latest_stable_fabric_loader_url(minecraft_version: &str) -> Result<String> {
+    println!("Fetching available Fabric loaders for Minecraft {}...", minecraft_version);
+    let client = get_http_client();
+    let index_url = format!("{}{}", FABRIC_LOADERS_URL_INDEX, minecraft_version);
+
+    let response_text = client.get(&index_url).send().await?.text().await?;
+
+    let loader_versions: FabricLoaderVersions = serde_json::from_str(&response_text)
+        .map_err(|e| anyhow::anyhow!("Failed to parse Fabric loader versions: {}", e))?;
+
+    println!("Found {} available Fabric loaders.", loader_versions.len());
+
+    let latest_stable = loader_versions.into_iter().find(|v| v.loader.stable);
+
+    match latest_stable {
+        Some(loader_info) => {
+            let loader_version = &loader_info.loader.version;
+            println!("Found latest stable Fabric loader: {}", loader_version);
+
+            let profile_url = format!(
+                "https://meta.fabricmc.net/v2/versions/loader/{}/{}/profile/json",
+                minecraft_version,
+                loader_version
+            );
+
+            Ok(profile_url)
+        }
+        None => {
+            Err(anyhow::anyhow!("No stable Fabric loader found for Minecraft version '{}'.", minecraft_version))
+        }
+    }
 }
