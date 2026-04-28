@@ -7,13 +7,20 @@ pub fn launch_game(
     java_bin_path: &std::path::Path,
     username: &str,
     classpath: String,
-    main_class: &String,
+    main_class: String,
+    natives: bool
 ) -> anyhow::Result<Child> {
     let mut cmd = Command::new(java_bin_path);
+
+    let natives_path = base_path.join("versions").join(&manifest.id).join("natives");
 
     // Memory arguments
     cmd.arg("-Xmx2G");
     cmd.arg("-Xms512M");
+
+    if natives {
+        cmd.arg(format!("-Djava.library.path={}", natives_path.to_string_lossy()));
+    }
 
     // Classpath
     cmd.arg("-cp").arg(classpath);
@@ -32,9 +39,11 @@ pub fn launch_game(
     cmd.arg("--accessToken").arg("0");
     cmd.arg("--userType").arg("mojang");
     cmd.arg("--versionType").arg("release");
+    cmd.arg("-Dorg.lwjgl.util.Debug=true");
+    cmd.arg("-Dorg.lwjgl.util.DebugLoader=true");
 
-    // Lanzar!
-    println!("Launching Minecraft 1.20.1...");
+    // Launch!!
+    println!("Launching Minecraft {}...", &manifest.id);
     let process = cmd.spawn()?;
     Ok(process)
 }

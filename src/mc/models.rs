@@ -59,10 +59,11 @@ pub struct GameRule {
     pub features: Features,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, PartialEq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Action {
     Allow,
+    Disallow
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -98,16 +99,17 @@ pub struct JvmClass {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JvmRule {
     pub action: Action,
-    pub os: PurpleOs,
+    pub os: Option<PurpleOs>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PurpleOs {
     pub name: Option<Name>,
     pub arch: Option<String>,
+    pub version: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, PartialEq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Name {
     Linux,
@@ -163,6 +165,13 @@ pub struct Library {
     pub downloads: LibraryDownloads,
     pub name: String,
     pub rules: Option<Vec<LibraryRule>>,
+    pub natives: Option<HashMap<String, String>>,
+    pub extract: Option<ExtractRules>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExtractRules {
+    pub exclude: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -175,7 +184,7 @@ pub struct LibraryDownloads {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LibraryRule {
     pub action: Action,
-    pub os: FluffyOs,
+    pub os: Option<FluffyOs>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -8,18 +8,17 @@ use crate::mc::models::VersionManifest;
 use crate::net::get_http_client;
 
 use anyhow::Result;
-use crate::fabric::index_model::{FabricLoaderVersion, FabricLoaderVersions};
-use crate::version_index::find_version_manifest_url;
+use crate::fabric::index_model::{FabricLoaderVersions};
 
 const FABRIC_LOADERS_URL_INDEX: &str = "https://meta.fabricmc.net/v2/versions/loader/";
 
-const FABRIC_LOADER_URL_BASE: &str = "https://meta.fabricmc.net/v2/versions/loader/"; // Add /profile/json at end
+// const FABRIC_LOADER_URL_BASE: &str = "https://meta.fabricmc.net/v2/versions/loader/"; // Add /profile/json at end
 
 
 pub(crate) mod models;
 mod index_model;
 
-pub async fn get_fabric_manifest(version: &str) -> anyhow::Result<FabricProfile> {
+pub async fn get_fabric_manifest(version: &str) -> Result<FabricProfile> {
 
     // https://meta.fabricmc.net/v2/versions/loader/1.20.1/0.19.2/profile/json
     let url = find_latest_stable_fabric_loader_url(version).await?; // I'm dumb ^^
@@ -53,7 +52,7 @@ pub fn gen_fabric_path(lib: &FabricLibrary) -> std::path::PathBuf {
 pub async fn download_fabric_libraries(
     manifest_fabric: &FabricProfile,
     base_path: &Path,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     let client = get_http_client();
     let libraries_dir = base_path.join("libraries");
 
@@ -93,7 +92,7 @@ pub async fn download_fabric_libraries(
 pub fn gen_cp_fabric(
     manifest_mc: &VersionManifest,
     manifest_fabric: &FabricProfile,
-    base_path: &std::path::Path,
+    base_path: &Path,
 ) -> String {
     let mut cp_parts = Vec::new();
     let libraries_dir = base_path.join("libraries");

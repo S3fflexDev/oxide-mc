@@ -1,10 +1,8 @@
 use crate::java::{check_java_version, download_java_runtime};
 use anyhow::Result;
 use std::path::PathBuf;
-use sha1::digest::typenum::Mod;
-use crate::functions::base_path;
+use crate::functions::{base_path, clean_data_directory};
 use crate::platform::JAVA_EXECUTABLE;
-use crate::state::load_profile;
 use crate::state::models::{InstallationProfile, ModLoader};
 
 pub mod fabric;
@@ -41,10 +39,10 @@ pub struct JavaInfo {
 
 impl OxideLauncher {
     pub fn new(username: &str) -> Self {
-        let base = functions::base_path();
+        let base = base_path();
         println!("base path: {}", base.display());
 
-        let _java_installed = java::check_java_version().unwrap();
+        let _java_installed = check_java_version().unwrap();
 
         let java_path = base.join("runtime").join("bin").join(JAVA_EXECUTABLE);
 
@@ -76,15 +74,20 @@ impl OxideLauncher {
         &self,
         modpack_url: Option<&str>,
         version: &str,
-        modloader: ModLoader
+        modloader: ModLoader,
+        clean_install: bool
     ) -> Result<i64> {
         println!("Beggining installation on: {:?}", self.settings.game_path);
+
+        let base_path = base_path();
+        
+        if clean_install {
+            clean_data_directory(&base_path)?;
+        }
 
         // Get manifests
         let manifest = mc::get_manifest(version).await?;
         let fabric_manifest = fabric::get_fabric_manifest(version).await?;
-
-        let base_path = base_path();
 
         let _game_version = &manifest.id.clone();
         let _loader_version = &fabric_manifest.inherits_from.clone();
@@ -101,6 +104,30 @@ impl OxideLauncher {
         let mut main_class: String = manifest.main_class.clone();
 
         let mut final_classpath: String = mc::gen_classpath(&manifest, &self.settings.game_path);
+
+        let mut natives_libraries: Option<bool> = None;
+
+        let v: Vec<u32> = version
+            .split('.')
+            .filter_map(|s| s.parse().ok())
+            .collect();
+
+
+        match v.as_slice() {
+            [1, minor, ..] if *minor < 19 => {
+                // Menor
+                println!("Version {} is -1.19", version);
+                natives_libraries = Some(true);
+            },
+            [1, minor, ..] if *minor >= 19 => {
+                // Mayor
+                println!("Version {} is +1.19", version);
+                natives_libraries = Some(false);
+            },
+            _ => {
+                println!("Unknown version: {}", version);
+            }
+        }
         
         match modloader {
             ModLoader::Vanilla => {
@@ -119,12 +146,17 @@ impl OxideLauncher {
             }
         }
 
+        if natives_libraries.unwrap_or(false) == true {
+            mc::download_and_extract_natives(&manifest, &self.settings.game_path).await?;
+        }
+
         let profile = InstallationProfile {
             minecraft_version: manifest.id.clone(),
             modloader_type: "vanilla".to_string(),
             modloader_version: None,
             main_class,
-            classpath: final_classpath
+            classpath: final_classpath,
+            native_libraries: natives_libraries.unwrap_or(false),
         };
 
         state::save_profile(&profile)?;
@@ -157,14 +189,13 @@ impl OxideLauncher {
                 p
             },
             None => {
-                // Si no hay perfil, no hay nada que hacer. Error claro.
                 return Err(anyhow::anyhow!("No installation found. Please run the 'install' command first."));
             }
         };
 
 
         let manifest = mc::get_manifest(&*profile.minecraft_version).await?;
-        let fabric_manifest = fabric::get_fabric_manifest(&profile.minecraft_version).await?;
+        // let fabric_manifest = fabric::get_fabric_manifest(&profile.minecraft_version).await?;
 
         // let cp = mc::gen_classpath(&manifest, &self.settings.game_path);
         // let main_class = &manifest.main_class;
@@ -175,7 +206,8 @@ impl OxideLauncher {
             &self.settings.java_path,
             &self.settings.username,
             profile.classpath,
-            &profile.main_class,
+            profile.main_class,
+            profile.native_libraries
         )
     }
 
@@ -195,7 +227,7 @@ impl OxideLauncher {
         Ok(())
     }
 
-    pub async fn check_java(&self) -> anyhow::Result<i32> {
+    pub async fn check_java(&self) -> Result<i32> {
         check_java_version()
     }
 }

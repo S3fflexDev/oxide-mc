@@ -6,6 +6,7 @@ use crate::net::get_http_client;
 #[cfg(target_os = "windows")]
 fn java_download_url(version: i64) -> anyhow::Result<(&'static str, &'static str)> {
     match version {
+        8 => Ok(("jdk8u472-b08", "https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u472-b08/OpenJDK8U-jdk_x64_windows_hotspot_8u472b08.zip")),
         17 => Ok(("jdk-17.0.5+8", "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.5%2B8/OpenJDK17U-jdk_x64_windows_hotspot_17.0.5_8.zip")),
         21 => Ok(("jdk-21.0.8+9", "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.zip")),
         _ => Err(anyhow::anyhow!("Java version {} not supported", version)),
@@ -15,6 +16,7 @@ fn java_download_url(version: i64) -> anyhow::Result<(&'static str, &'static str
 #[cfg(target_os = "linux")]
 fn java_download_url(version: i64) -> anyhow::Result<(&'static str, &'static str)> {
     match version {
+        8 => Ok(("jdk8u472-b08", "https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u472-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u472b08.tar.gz")),
         17 => Ok(("jdk-17.0.5+8", "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.5%2B8/OpenJDK17U-jdk_x64_linux_hotspot_17.0.5_8.tar.gz")),
         21 => Ok(("jdk-21.0.8+9", "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_x64_linux_hotspot_21.0.8_9.tar.gz")),
         _ => Err(anyhow::anyhow!("Java version {} not supported", version)),
@@ -24,6 +26,7 @@ fn java_download_url(version: i64) -> anyhow::Result<(&'static str, &'static str
 #[cfg(target_os = "macos")]
 fn java_download_url(version: i64) -> anyhow::Result<(&'static str, &'static str)> {
     match version {
+        8 => Ok(("jdk8u472-b08", "https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u472-b08/OpenJDK8U-jdk_x64_mac_hotspot_8u472b08.tar.gz")),
         17 => Ok(("jdk-17.0.5+8", "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.5%2B8/OpenJDK17U-jdk_x64_mac_hotspot_17.0.5_8.tar.gz")),
         21 => Ok(("jdk-21.0.8+9", "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_x64_mac_hotspot_21.0.8_9.tar.gz")),
         _ => Err(anyhow::anyhow!("Java version {} not supported", version)),

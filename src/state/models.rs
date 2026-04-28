@@ -1,6 +1,5 @@
 
 use serde::{Serialize, Deserialize};
-use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct InstallationProfile {
@@ -9,6 +8,7 @@ pub struct InstallationProfile {
     pub modloader_version: Option<String>,
     pub main_class: String,
     pub classpath: String,
+    pub native_libraries: bool
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq, Eq)]

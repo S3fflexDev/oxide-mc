@@ -3,9 +3,10 @@ pub(crate) mod models;
 use std::path::Path;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
-use crate::mc::models::VersionManifest;
+use crate::mc::models::{Action, Library, Name, VersionManifest};
 use crate::net::get_http_client;
-use crate::version_index;
+use crate::{version_index};
+use crate::functions::extract_zip;
 
 pub async fn get_manifest(version: &str) -> anyhow::Result<VersionManifest> {
     println!("Getting manifest for version: {}", version);
@@ -78,7 +79,7 @@ pub async fn download_libraries(
 
 pub async fn download_client(
     manifest: &VersionManifest,
-    base_path: &std::path::Path,
+    base_path: &Path,
 ) -> anyhow::Result<()> {
     let client = get_http_client();
 
@@ -107,27 +108,73 @@ pub async fn download_client(
     Ok(())
 }
 
+
 pub(crate) fn collect_vanilla_cp(
-    libraries: &[crate::mc::models::Library],
+    libraries: &[Library],
     libraries_dir: &Path,
     cp_parts: &mut Vec<String>,
 ) {
     for lib in libraries {
-        let Some(artifact) = &lib.downloads.artifact else {
+        if !should_use_library(lib) {
             continue;
-        };
-        let Some(rel_path) = &artifact.path else {
-            continue;
-        };
-        let full_path = libraries_dir.join(rel_path);
-        let Some(path_str) = full_path.to_str() else {
-            continue;
-        };
-        cp_parts.push(path_str.to_string());
+        }
+        
+        if let Some(artifact) = &lib.downloads.artifact {
+            if let Some(rel_path) = &artifact.path {
+                let full_path = libraries_dir.join(rel_path);
+                if let Some(path_str) = full_path.to_str() {
+                    let p = path_str.to_string();
+                    if !cp_parts.contains(&p) {
+                        cp_parts.push(p);
+                    }
+                }
+            }
+        }
+        
+        if let Some(native_artifact) = lib.downloads.classifiers.get("natives-windows") {
+            if let Some(rel_path) = &native_artifact.path {
+                let full_path = libraries_dir.join(rel_path);
+                if let Some(path_str) = full_path.to_str() {
+                    let p = path_str.to_string();
+                    if !cp_parts.contains(&p) {
+                        cp_parts.push(p);
+                    }
+                }
+            }
+        }
     }
 }
+pub(crate) fn should_use_library(lib: &Library) -> bool {
+    if let Some(rules) = &lib.rules {
+        let mut allow = false;
+        for rule in rules {
+            let os_matches = if let Some(os) = &rule.os {
+                os.name == Name::Windows
+            } else {
+                true
+            };
 
-pub fn gen_classpath(manifest: &VersionManifest, base_path: &std::path::Path) -> String {
+            if os_matches {
+                allow = rule.action == Action::Allow;
+            }
+        }
+        return allow;
+    }
+    true
+}
+
+/*
+fn get_library_base_name(name: &str) -> String {
+    let parts: Vec<&str> = name.split(':').collect();
+    if parts.len() >= 2 {
+        format!("{}:{}", parts[0], parts[1])
+    } else {
+        name.to_string()
+    }
+}
+*/
+
+pub fn gen_classpath(manifest: &VersionManifest, base_path: &Path) -> String {
     let mut cp_parts = Vec::new();
     let libraries_dir = base_path.join("libraries");
 
@@ -142,4 +189,38 @@ pub fn gen_classpath(manifest: &VersionManifest, base_path: &std::path::Path) ->
     }
 
     cp_parts.join(crate::platform::CLASSPATH_SEPARATOR)
+}
+
+pub fn get_native_classifier(lib: &Library) -> Option<String> {
+    let os_key = if cfg!(target_os = "windows") {
+        "windows"
+    } else if cfg!(target_os = "linux") {
+        "linux"
+    } else {
+        "osx"
+    };
+
+    lib.natives.as_ref()?.get(os_key).cloned()
+}
+
+pub async fn download_and_extract_natives(manifest: &VersionManifest, base_path: &Path) -> anyhow::Result<()> {
+    let client = reqwest::Client::new();
+    let natives_dir = base_path.join("versions").join(&manifest.id).join("natives");
+    fs::create_dir_all(&natives_dir).await?;
+
+    for lib in &manifest.libraries {
+        if let Some(classifier) = get_native_classifier(lib) {
+            if let Some(native_artifact) = lib.downloads.classifiers.get(&classifier) {
+                println!("Downloading and extracting native: {}", lib.name);
+
+                let response = client.get(&native_artifact.url).send().await?;
+                let bytes = response.bytes().await?;
+
+                extract_zip(&bytes, &natives_dir, false)?;
+            }
+        }
+    }
+
+
+    Ok(())
 }
