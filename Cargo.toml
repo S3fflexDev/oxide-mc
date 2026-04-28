@@ -1,6 +1,6 @@
 [package]
 name = "oxide-mc"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["S3fflex <ejiteambros@gmail.com>"]
 description = "A high-performance, lightweight async Minecraft engine core built in Rust for Tauri launchers."
