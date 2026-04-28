@@ -9,9 +9,7 @@
 
 OxideMC is a lightweight Minecraft manager designed for efficiency and performance. Built from the ground up in **Rust**, it is specifically crafted to be compatible with the **Tauri framework**.
 
-Currently, it serves as a full installer of any versions more than +1.19 vanilla and injector of **Fabric** +1.19, with support for **NeoForge** more vanilla versions coming soon.
-
-For most Minecraft versions coming soon...
+Currently, it serves as a full installer of any versions of Minecraft and Fabric (+1.8.7), with support for **NeoForge** more vanilla versions coming soon.
 
 ## 🚀 Why OxideMC?
 
