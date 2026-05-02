@@ -5,8 +5,10 @@ use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use crate::mc::models::{Action, Library, Name, VersionManifest};
 use crate::net::get_http_client;
-use crate::{version_index};
+use crate::{fabric, state, version_index};
 use crate::functions::extract_zip;
+use crate::state::load_profile;
+use crate::state::models::ModLoader;
 
 pub async fn get_manifest(version: &str) -> anyhow::Result<VersionManifest> {
     println!("Getting manifest for version: {}", version);
@@ -223,4 +225,27 @@ pub async fn download_and_extract_natives(manifest: &VersionManifest, base_path:
 
 
     Ok(())
+}
+
+pub async fn check_game_installed(version: &str, mod_loader: &str) -> anyhow::Result<bool> {
+
+    let profile = match state::load_profile()? {
+        Some(p) => {
+            println!("Found installation profile: {}", p.minecraft_version);
+            p
+        },
+        None => {
+            return Ok(false);
+        }
+    };
+
+    if profile.minecraft_version != version {
+        return Ok(false)
+    }
+
+    if profile.modloader_type != mod_loader {
+        return Ok(false)
+    }
+
+    Ok(true)
 }

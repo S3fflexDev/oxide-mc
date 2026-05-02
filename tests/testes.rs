@@ -33,3 +33,11 @@ async fn check_java_version_test() -> anyhow::Result<()> {
     launcher.check_java().await?;
     Ok(())
 }
+
+#[tokio::test]
+async fn check_game_installed() -> anyhow::Result<()> {
+    let launcher = OxideLauncher::new("TestUser");
+    let result = launcher.check_game("1.20.1", "vanilla").await?;
+    println!("{:#?}", result);
+    Ok(())
+}

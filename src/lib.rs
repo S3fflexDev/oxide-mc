@@ -2,6 +2,7 @@ use crate::java::{check_java_version, download_java_runtime};
 use anyhow::Result;
 use std::path::PathBuf;
 use crate::functions::{base_path, clean_data_directory};
+use crate::mc::check_game_installed;
 use crate::platform::JAVA_EXECUTABLE;
 use crate::state::models::{InstallationProfile, ModLoader};
 
@@ -129,9 +130,10 @@ impl OxideLauncher {
             }
         }
         
-        match modloader {
+        let modloader: &str = match modloader {
             ModLoader::Vanilla => {
                 println!("Vanilla installation complete.");
+                "vanilla"
             }
             ModLoader::Fabric => {
                 println!("Installing Fabric...");
@@ -139,12 +141,14 @@ impl OxideLauncher {
                 main_class = fabric_manifest.main_class.clone();
                 final_classpath = fabric::gen_cp_fabric(&manifest, &fabric_manifest, &base_path);
                 println!("Fabric installation complete.");
+                "fabric"
             }
             ModLoader::NeoForge => {
                 println!("Installing NeoForge...");
-                println!("Neoforge is a placeholder :).");
+                println!("Neoforge is not available.");
+                "neoforge"
             }
-        }
+        };
 
         if natives_libraries.unwrap_or(false) == true {
             mc::download_and_extract_natives(&manifest, &self.settings.game_path).await?;
@@ -152,7 +156,7 @@ impl OxideLauncher {
 
         let profile = InstallationProfile {
             minecraft_version: manifest.id.clone(),
-            modloader_type: "vanilla".to_string(),
+            modloader_type: modloader.to_string(),
             modloader_version: None,
             main_class,
             classpath: final_classpath,
@@ -229,5 +233,10 @@ impl OxideLauncher {
 
     pub async fn check_java(&self) -> Result<i32> {
         check_java_version()
+    }
+
+    pub async fn check_game(&self, version: &str, mod_loader: &str) -> Result<bool> {
+        let result = check_game_installed(version, mod_loader).await?;
+        Ok(result)
     }
 }
