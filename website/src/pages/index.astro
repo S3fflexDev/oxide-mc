@@ -1,64 +1,56 @@
 ---
 import "../styles/global.css";
+// 1. Importa las fuentes localmente
+import '@fontsource-variable/bricolage-grotesque';
+import '@fontsource-variable/inter';
 
 import Background from "../components/Background.astro";
 import Lines from "../components/Lines.astro";
-
 import { Icon } from 'astro-icon/components'
 ---
 
 <html lang="en">
 <head>
-
     <meta charset="UTF-8" />
     <title>Oxide</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg" href="/favicon.svg">
     <script is:inline>
-        const theme = localStorage.getItem("starlight-theme")
-        || window.matchMedia("(prefers-color-scheme: light)").matches
-            ? "light"
-            : "dark";
-
+        const theme = localStorage.getItem("starlight-theme") || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
         document.documentElement.setAttribute("data-theme", theme);
     </script>
 </head>
-<body class="bg-dark-900 h-screen w-screen flex flex-col justify-center">
-    <Background/>
-    <Lines/>
-    <div class="hero w-screen h-screen border-[#282624] border-b-2 border-t-2 my-[4.64%]">
-        <div class="mx-[5.38%] h-[100%] flex flex-col relative overflow-visible">
-            <div class="m-[50px]">
-                <div>
-                    <h1 class="text-white text-8xl w-[824px] ">
-                        A fast and minimal Minecraft launcher library
-                    </h1>
-                </div>
-                <div class="h-[50px]"/>
-                <div class="buttons flex flex-row gap-4">
-                    <a href="/docs" class="text-3xl px-8 py-3.5 rounded-full bg-gradient-to-r from-[#CC7F33] to-[#E99F56] flex flex-row gap-3.5 items-center
-                        transition-all duration-300 ease-out hover:scale-105 hover:brightness-110">
-                        Get Started!
-                        <Icon name="fluent:book-open-globe-24-filled"/>
-                    </a>
-                    <div class="text-3xl px-8 py-3.5 rounded-full bg-[#242424] text-[#B7B7B7]">
-                        oxide-mc = "0.2.1"
-                    </div>
-                </div>
-            </div>
+<body class="bg-[#0a0a0a] h-screen w-screen flex flex-col justify-center overflow-hidden">
+<Background/>
+<Lines/>
 
-            <div class="absolute top-0 right-0 w-[500px] m-[50px]">
-                <h3 class="text-[#B6B6B6] text-4xl text-right">
-                    A lightweight solution for Minecraft management
-                    written in Rust
-                </h3>
-            </div>
-
-            <div class="absolute bottom-0 right-0 w-[500px] pointer-events-none">
-                <img src="/assets/lightning.svg" alt="Lightning" class="w-full h-auto"/>
+<main class="hero w-screen h-screen border-[#282624] border-b-2 border-t-2 my-[4.64%]">
+    <div class="mx-[5.38%] h-[100%] flex flex-col relative">
+        <div class="m-[50px] z-10">
+            <h1 class="text-white text-8xl w-[824px] font-['Bricolage_Grotesque_Variable']">
+                A fast and minimal Minecraft launcher library
+            </h1>
+            <div class="h-[50px]"/>
+            <div class="buttons flex flex-row gap-4">
+                <a href="/en" class="text-3xl px-8 py-3.5 rounded-full bg-gradient-to-r from-[#CC7F33] to-[#E99F56] flex flex-row gap-3.5 items-center transition-transform hover:scale-105">
+                    Get Started!
+                    <Icon name="fluent:book-open-globe-24-filled"/>
+                </a>
+                <div class="inter text-3xl px-8 py-3.5 rounded-full bg-[#242424] text-[#B7B7B7] font-mono">
+                    oxide-mc = "0.2.1"
+                </div>
             </div>
         </div>
+
+        <div class="absolute top-0 right-0 w-[500px] m-[50px] z-10">
+            <h3 class="text-[#B6B6B6] text-4xl text-right font-['Inter_Variable']">
+                A lightweight solution for Minecraft management written in Rust
+            </h3>
+        </div>
+
+        <div class="absolute bottom-0 right-0 w-[600px] pointer-events-none opacity-50">
+            <img src="/assets/lightning.svg" alt="Lightning" />
+        </div>
     </div>
+</main>
 </body>
 </html>
