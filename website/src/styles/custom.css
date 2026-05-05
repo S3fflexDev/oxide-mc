@@ -8,8 +8,8 @@
 
     --bg-light: radial-gradient(
             circle at top,
-            #f8c4a4 0%,
-            #fff1ee 60%,
+            #ffdabe 0%,
+            #ffffff 20%,
             #ffffff 100%
     );
 }
@@ -71,5 +71,7 @@ figcaption {
     border-radius: 15px 15px 0px 0px;
 }
 
-figcaption::after {
+code {
+    border-radius: 5px;
+    margin: 0px 5px 5px 0px;
 }
