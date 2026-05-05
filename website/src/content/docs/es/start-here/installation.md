@@ -9,7 +9,7 @@ Añádela de esta manera tan fácil
 ```bash
 cargo add oxide_mc
 ```
-Esta herramienta está enfocada para launchers de series, modpacks individuales, etc..., no para launchers completos como Modrinth o GDLauncher, igualmente se podria hacer, pero no es el enfoque.
+Esta herramienta está enfocada para launchers de series, modpacks individuales, etc., no para launchers completos como Modrinth o GDLauncher, igualmente se podría hacer, pero no es el enfoque.
 
 # Guía de Uso
 
@@ -60,9 +60,17 @@ Oxide MC maneja Java de forma portable para hacerlo mucho más fácil y más aut
 Si no se descarga la versión de Java indicada para la versión que se va a instalar puede fallar terriblemente.
 
 
+| Versión de Minecraft | Java Recomendado | Comando Oxide       |
+|:---------------------|:----------------:|:--------------------|
+| **1.20.5 — 1.21.x**  |     Java 21      | `java_download(21)` |
+| **1.18 — 1.20.4**    |     Java 17      | `java_download(17)` |
+| **1.17**             |     Java 16      | `java_download(16)` |
+| **1.12.2 — 1.16.5**  |   Java 8 / 11    | `java_download(8)`  |
+| **1.7.10 — 1.12.1**  |      Java 8      | `java_download(8)`  |
+| **Versiones Legacy** |      Java 8      | `java_download(8)`  |
 
 ```rust
-async fn java_donwload() -> anyhow::Result<()> {
+async fn java_download() -> anyhow::Result<()> {
     let mut launcher = OxideLauncher::new("TestUser");
 
     launcher.java_download(17).await?;

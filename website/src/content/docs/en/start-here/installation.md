@@ -57,6 +57,15 @@ Oxide MC manages Java, but is portable, for making it more easy and more automat
 
 If you don't download the right version of Java for each version, the start could fail.
 
+| Version of Minecraft | Java Recomended | Command Oxide       |
+|:---------------------|:---------------:|:--------------------|
+| **1.20.5 — 1.21.x**  |     Java 21     | `java_download(21)` |
+| **1.18 — 1.20.4**    |     Java 17     | `java_download(17)` |
+| **1.17**             |     Java 16     | `java_download(16)` |
+| **1.12.2 — 1.16.5**  |   Java 8 / 11   | `java_download(8)`  |
+| **1.7.10 — 1.12.1**  |     Java 8      | `java_download(8)`  |
+| **Versiones Legacy** |     Java 8      | `java_download(8)`  |
+
 ```rust
 async fn java_donwload() -> anyhow::Result<()> {
     let mut launcher = OxideLauncher::new("TestUser");
