@@ -1,7 +1,6 @@
 ---
-title: Installation
+title: Instalación
 ---
-
 
 Oxide es una librería asíncrona diseñada para que crear un launcher de Minecraft no sea un dolor de cabeza. Nos encargamos de las librerías, los assets y la JVM por ti. Diseñada principalmente para su uso en Tauri.
 

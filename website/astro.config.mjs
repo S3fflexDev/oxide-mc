@@ -16,21 +16,22 @@ export default defineConfig({
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/S3fflexDev/oxide-mc' }],
       defaultLocale: 'en',
       locales: {
-          en: { label: 'English' }
+          en: { label: 'English' },
+          es: { label: 'Español' }
       },
       sidebar: [
           {
               label: 'Start Here',
-              /*translations: {
+              translations: {
                   es: 'Empieza aquí'
-              },*/
+              },
               items: [
                   {
                       label: 'Installation',
                       link: 'start-here/installation',
-                      /*translations: {
+                      translations: {
                           es: 'Instalación'
-                      }*/
+                      }
                   },
               ],
           },
