@@ -76,28 +76,27 @@ jobs:
     needs: [ test, build ]
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
+      pages: write
+      id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout your repository
+        uses: actions/checkout@v4
 
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Install, build, and upload your site
+        uses: withastro/action@v3
         with:
-          bun-version: latest
+          path: ./website
+          node-version: 22
+          package-manager: bun
 
-      - name: Install and Build
-        run: |
-          cd website
-          bun install
-          # Forzamos a Astro a generar los archivos
-          bun run build
-
-      - name: Check if dist exists
-        run: ls -R website/dist
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./website/dist
-          force_orphan: true
+    deploy:
+      needs: deploy-docs
+      runs-on: ubuntu-latest
+      environment:
+        name: github-pages
+        url: ${{ steps.deployment.outputs.page_url }}
+      steps:
+        - name: Deploy to GitHub Pages
+          id: deployment
+          uses: actions/deploy-pages@v4
