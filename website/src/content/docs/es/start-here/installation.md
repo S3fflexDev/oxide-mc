@@ -114,4 +114,4 @@ use oxide_mc::OxideLauncher;
 ```
 
 ---
-*Made with ❤️ by a 16 years old dev.*
+*Hecho con ❤️ por un desarrollador de 16 años.*
