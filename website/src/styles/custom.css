@@ -58,3 +58,18 @@ body {
     --sl-color-gray-7: #f7f6f5;
     --sl-color-black: #ffffff;
 }
+
+pre {
+    border-radius: 10px;
+}
+
+pre[data-language="bash"] {
+    border-radius: 0px 0px 15px 15px;
+}
+
+figcaption {
+    border-radius: 15px 15px 0px 0px;
+}
+
+figcaption::after {
+}

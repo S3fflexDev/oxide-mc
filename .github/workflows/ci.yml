@@ -70,3 +70,33 @@ jobs:
         with:
           files: coverage/cobertura.xml
           fail_ci_if_not_uploaded: false
+
+  deploy-docs:
+    name: Deploy Website
+    needs: [ test, build ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          cd website
+          npm install
+
+      - name: Build Starlight
+        run: |
+          cd website
+          npm run build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./website/dist
