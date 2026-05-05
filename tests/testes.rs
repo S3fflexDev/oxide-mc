@@ -14,13 +14,13 @@ async fn test_install() -> anyhow::Result<()> {
 async fn run() -> anyhow::Result<()> {
     let launcher = OxideLauncher::new("TestUser");
 
-    launcher.start().await?;
+    launcher.start("8G").await?;
     Ok(())
 }
 
 #[tokio::test]
 #[ignore]
-async fn java_donwload() -> anyhow::Result<()> {
+async fn java_download() -> anyhow::Result<()> {
     let mut launcher = OxideLauncher::new("TestUser");
 
     launcher.java_download(8).await?;

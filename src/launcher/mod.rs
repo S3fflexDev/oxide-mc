@@ -8,14 +8,15 @@ pub fn launch_game(
     username: &str,
     classpath: String,
     main_class: String,
-    natives: bool
+    natives: bool,
+    max_ram: &str
 ) -> anyhow::Result<Child> {
     let mut cmd = Command::new(java_bin_path);
 
     let natives_path = base_path.join("versions").join(&manifest.id).join("natives");
 
     // Memory arguments
-    cmd.arg("-Xmx2G");
+    cmd.arg(format!("-Xmx{}", max_ram));
     cmd.arg("-Xms512M");
 
     if natives {

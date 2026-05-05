@@ -43,8 +43,6 @@ impl OxideLauncher {
         let base = base_path();
         println!("base path: {}", base.display());
 
-        let _java_installed = check_java_version().unwrap();
-
         let java_path = base.join("runtime").join("bin").join(JAVA_EXECUTABLE);
 
         Self {
@@ -89,9 +87,6 @@ impl OxideLauncher {
         // Get manifests
         let manifest = mc::get_manifest(version).await?;
         let fabric_manifest = fabric::get_fabric_manifest(version).await?;
-
-        let _game_version = &manifest.id.clone();
-        let _loader_version = &fabric_manifest.inherits_from.clone();
 
         let java_version: &i64 = &manifest.java_version.major_version.clone();
 
@@ -179,7 +174,7 @@ impl OxideLauncher {
         Ok(*java_version)
     }
 
-    pub async fn start(&self) -> Result<std::process::Child> {
+    pub async fn start(&self, max_ram: &str) -> Result<std::process::Child> {
         if !self.settings.java_path.exists() {
             return Err(anyhow::anyhow!(
                 "Java not found on path: {:?}",
@@ -211,7 +206,8 @@ impl OxideLauncher {
             &self.settings.username,
             profile.classpath,
             profile.main_class,
-            profile.native_libraries
+            profile.native_libraries,
+            max_ram
         )
     }
 

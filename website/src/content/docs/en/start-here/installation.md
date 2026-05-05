@@ -88,7 +88,7 @@ This is for making it more easy, the library auto-detects the version you've ins
 async fn run() -> anyhow::Result<()> {
     let launcher = OxideLauncher::new("TestUser");
 
-    launcher.start().await?;
+    launcher.start("8G").await?; // 8G is the argument of how much RAM the game needs
     Ok(())
 }
 ```

@@ -59,21 +59,21 @@ pub fn clean_data_directory(base_path: &Path) -> std::io::Result<()> {
         if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
             
             if file_name == "install_profile.json" || file_name == "runtime" {
-                println!("Saltando: {}", file_name);
+                println!("Skip: {}", file_name);
                 continue;
             }
             
             if path.is_dir() {
                 if let Err(e) = fs::remove_dir_all(&path) {
-                    eprintln!("No se pudo borrar la carpeta {:?}: {}", path, e);
+                    eprintln!("Folder cannot be deleted {:?}: {}", path, e);
                 } else {
-                    println!("Carpeta borrada: {}", file_name);
+                    println!("Folder deleted: {}", file_name);
                 }
             } else {
                 if let Err(e) = fs::remove_file(&path) {
-                    eprintln!("No se pudo borrar el archivo {:?}: {}", path, e);
+                    eprintln!("File cannot be deleted {:?}: {}", path, e);
                 } else {
-                    println!("Archivo borrado: {}", file_name);
+                    println!("File deleted: {}", file_name);
                 }
             }
         }

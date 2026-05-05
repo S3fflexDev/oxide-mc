@@ -3,12 +3,11 @@ pub(crate) mod models;
 use std::path::Path;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
+use tokio::task::JoinSet;
 use crate::mc::models::{Action, Library, Name, VersionManifest};
 use crate::net::get_http_client;
-use crate::{fabric, state, version_index};
+use crate::{state, version_index};
 use crate::functions::extract_zip;
-use crate::state::load_profile;
-use crate::state::models::ModLoader;
 
 pub async fn get_manifest(version: &str) -> anyhow::Result<VersionManifest> {
     println!("Getting manifest for version: {}", version);
@@ -49,33 +48,33 @@ pub async fn download_libraries(
 ) -> anyhow::Result<()> {
     let client = get_http_client();
     let libraries_dir = base_path.join("libraries");
-
-    println!("Downloading libraries in: {:?}", libraries_dir);
+    let mut set = JoinSet::new();
 
     for lib in &manifest.libraries {
-        let Some(artifact) = &lib.downloads.artifact else {
-            continue;
-        };
-        let relative_path = artifact
-            .path
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Missing path"))?;
-        let target_path = libraries_dir.join(relative_path);
+        let Some(artifact) = &lib.downloads.artifact else { continue; };
+        let relative_path = artifact.path.as_ref().ok_or_else(|| anyhow::anyhow!("Missing path"))?.clone();
+        let target_path = libraries_dir.join(&relative_path);
+        let url = artifact.url.clone();
+        let client = client.clone();
+        
+        set.spawn(async move {
+            if target_path.exists() { return Ok(()); }
 
-        if let Some(parent) = target_path.parent() {
-            fs::create_dir_all(parent).await?;
-        }
+            if let Some(parent) = target_path.parent() {
+                fs::create_dir_all(parent).await?;
+            }
 
-        if target_path.exists() {
-            continue;
-        }
-        println!("Downloading: {}", lib.name);
-        let bytes = client.get(&artifact.url).send().await?.bytes().await?;
-        let mut file = fs::File::create(&target_path).await?;
-        file.write_all(&bytes).await?;
+            let bytes = client.get(url).send().await?.bytes().await?;
+            fs::write(&target_path, &bytes).await?;
+            Ok::<(), anyhow::Error>(())
+        });
     }
 
-    println!("All libraries are ready!");
+    while let Some(res) = set.join_next().await {
+        res??;
+    }
+
+    println!("All libraries downloaded in parallel!");
     Ok(())
 }
 

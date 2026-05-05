@@ -1,19 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-// Example code that deserializes and serializes the model.
-// extern crate serde;
-// #[macro_use]
-// extern crate serde_derive;
-// extern crate serde_json;
-//
-// use generated_module::Welcome;
-//
-// fn main() {
-//     let json = r#"{"answer": 42}"#;
-//     let model: Welcome = serde_json::from_str(&json).unwrap();
-// }
-
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VersionManifest {

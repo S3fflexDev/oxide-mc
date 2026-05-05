@@ -91,7 +91,7 @@ Para hacerlo de una manera **más facil** la librería detecta automaticamente q
 async fn run() -> anyhow::Result<()> {
     let launcher = OxideLauncher::new("TestUser");
 
-    launcher.start().await?;
+    launcher.start("8G").await?;  // 8G es el argumento de cuanta RAM tiene que utilizar el juego
     Ok(())
 }
 ```
