@@ -80,6 +80,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug - List files
+        run: ls -R
+
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
         with:
