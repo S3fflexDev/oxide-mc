@@ -2,7 +2,6 @@
 /test_minecraft/
 /logs/
 *.jar
-*.json
 *.exe
 *.dll
 .idea/

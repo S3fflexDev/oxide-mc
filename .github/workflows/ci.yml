@@ -80,22 +80,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Debug - List files
-        run: ls -R
-
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Install dependencies
-        run: bun install --cwd website
+      - name: Install and Build
+        run: |
+          cd website
+          bun install
+          # Forzamos a Astro a generar los archivos
+          bun run build
 
-      - name: Build Starlight
-        run: bun --cwd website run build
+      - name: Check if dist exists
+        run: ls -R website/dist
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./website/dist
+          force_orphan: true
