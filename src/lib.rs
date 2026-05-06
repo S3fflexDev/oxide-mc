@@ -1,22 +1,22 @@
-use crate::java::{check_java_version, download_java_runtime};
-use anyhow::Result;
-use std::path::PathBuf;
 use crate::functions::{base_path, clean_data_directory};
+use crate::java::{check_java_version, download_java_runtime};
 use crate::mc::check_game_installed;
 use crate::platform::JAVA_EXECUTABLE;
 use crate::state::models::{InstallationProfile, ModLoader};
+use anyhow::Result;
+use std::path::PathBuf;
 
+mod assets;
 pub mod fabric;
 pub mod functions;
-pub mod launcher;
-mod version_index;
-pub mod net;
-pub mod mc;
-mod assets;
-mod modpack;
 mod java;
+pub mod launcher;
+pub mod mc;
+mod modpack;
+pub mod net;
 mod platform;
 pub mod state;
+mod version_index;
 
 pub struct LauncherConfig {
     pub game_path: PathBuf,
@@ -74,15 +74,14 @@ impl OxideLauncher {
         modpack_url: Option<&str>,
         version: &str,
         modloader: ModLoader,
-        clean_install: bool
+        clean_install: bool,
     ) -> Result<i64> {
-
         tracing_subscriber::fmt::init();
 
         println!("Beggining installation on: {:?}", self.settings.game_path);
 
         let base_path = base_path();
-        
+
         if clean_install {
             clean_data_directory(&base_path)?;
         }
@@ -106,28 +105,24 @@ impl OxideLauncher {
 
         let mut natives_libraries: Option<bool> = None;
 
-        let v: Vec<u32> = version
-            .split('.')
-            .filter_map(|s| s.parse().ok())
-            .collect();
-
+        let v: Vec<u32> = version.split('.').filter_map(|s| s.parse().ok()).collect();
 
         match v.as_slice() {
             [1, minor, ..] if *minor < 19 => {
                 // Menor
                 println!("Version {} is -1.19", version);
                 natives_libraries = Some(true);
-            },
+            }
             [1, minor, ..] if *minor >= 19 => {
                 // Mayor
                 println!("Version {} is +1.19", version);
                 natives_libraries = Some(false);
-            },
+            }
             _ => {
                 println!("Unknown version: {}", version);
             }
         }
-        
+
         let modloader: &str = match modloader {
             ModLoader::Vanilla => {
                 println!("Vanilla installation complete.");
@@ -135,7 +130,8 @@ impl OxideLauncher {
             }
             ModLoader::Fabric => {
                 println!("Installing Fabric...");
-                fabric::download_fabric_libraries(&fabric_manifest, &self.settings.game_path).await?;
+                fabric::download_fabric_libraries(&fabric_manifest, &self.settings.game_path)
+                    .await?;
                 main_class = fabric_manifest.main_class.clone();
                 final_classpath = fabric::gen_cp_fabric(&manifest, &fabric_manifest, &base_path);
                 println!("Fabric installation complete.");
@@ -189,12 +185,13 @@ impl OxideLauncher {
             Some(p) => {
                 println!("Found installation profile: {}", p.minecraft_version);
                 p
-            },
+            }
             None => {
-                return Err(anyhow::anyhow!("No installation found. Please run the 'install' command first."));
+                return Err(anyhow::anyhow!(
+                    "No installation found. Please run the 'install' command first."
+                ));
             }
         };
-
 
         let manifest = mc::get_manifest(&*profile.minecraft_version).await?;
         // let fabric_manifest = fabric::get_fabric_manifest(&profile.minecraft_version).await?;
@@ -210,7 +207,7 @@ impl OxideLauncher {
             profile.classpath,
             profile.main_class,
             profile.native_libraries,
-            max_ram
+            max_ram,
         )
     }
 

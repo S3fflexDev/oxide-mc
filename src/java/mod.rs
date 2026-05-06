@@ -1,8 +1,7 @@
-use std::process::Command;
-use tokio::fs;
-use crate::functions::extract_zip;
 use crate::net::get_http_client;
 use anyhow::Result;
+use std::process::Command;
+use tokio::fs;
 
 #[cfg(target_os = "windows")]
 fn java_download_url(version: i64) -> Result<(&'static str, &'static str)> {
@@ -63,10 +62,7 @@ fn extract_java_archive(data: &[u8], runtime_dir: &std::path::Path) -> Result<()
     Ok(())
 }
 
-pub async fn download_java_runtime(
-    base_path: &std::path::Path,
-    version: i64,
-) -> Result<String> {
+pub async fn download_java_runtime(base_path: &std::path::Path, version: i64) -> Result<String> {
     let runtime_dir = base_path.join("runtime");
 
     let (full_name, url) = java_download_url(version)?;
