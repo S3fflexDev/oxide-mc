@@ -22,14 +22,7 @@ OxideMC is a lightweight Minecraft manager designed for efficiency and performan
 
 Currently, it serves as a full installer of **any versions of Minecraft and Fabric** (+1.8.7), with support for **NeoForge** coming soon.
 
-### 💫 Focus
-Most launchers are heavy. **Oxide** is a core library that handles the "dirty work" (assets, libraries, JVM, Fabric) while staying out of your way.
-
-- **Memory Efficient**: Built for systems with 4GB RAM or less.
-- **Tauri-First**: Optimized for async execution in modern desktop backends.
-- **Native**: 0ms overhead, pure Rust performance.
-
-## ⚡ Quick Start
+## Quick Start
 
 ```rust
 use oxide_mc::OxideLauncher;
@@ -50,30 +43,25 @@ async fn main() -> anyhow::Result<()> {
 }
 ```
 
-## 🚀 Why OxideMC?
+## Features
 
-Most Minecraft launchers are resource-heavy. OxideMC is different:
+---
 
-- **Low RAM Footprint:** Designed exclusively for low-end devices (like 4GB RAM systems).
-- **Native Speed:** Written in Rust to ensure the launcher doesn't steal resources from the game.
-- **Maximum Performance:** Leaves more CPU and RAM available for Minecraft and the JVM to perform at their best.
-- **Tauri Ready:** Optimized to work as a backend for modern, lightweight desktop GUIs.
+- Installation: Downloads libraries, assets, and the game client.
+- Fabric Injection: Seamlessly integrates Fabric Loader (+1.8.7).
+- Modpack Support: Inject custom mods, configs, and shaders via URL.
+- Smart Runtime: Automatic Java version detection and portable installation.
+- Coming Soon: NeoForge support and legacy vanilla versions.
 
-✨ Features
+## Installation
 
-- ✅ Full Installation: Downloads libraries, assets, and the game client.
-- ✅ Fabric Injection: Seamlessly integrates Fabric Loader (+1.8.7).
-- ✅ Modpack Support: Inject custom mods, configs, and shaders via URL.
-- ✅ Smart Runtime: Automatic Java version detection and portable installation.
-- 🚧 Coming Soon: NeoForge support and legacy vanilla versions.
-
-## 🛠️ Installation (Dependency)
+---
 
 Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-oxide-mc = { git = "https://github.com/S3fflexDev/oxide-mc.git" }
+oxide-mc = "0.2.1"
 ```
 
 or use command: `cargo add oxide-mc`
