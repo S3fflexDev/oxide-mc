@@ -1,7 +1,12 @@
-use std::fs;
+use tokio::fs;
 use std::path::Path;
+use anyhow::Result;
+use directories::ProjectDirs;
+use futures_util::StreamExt;
+use reqwest::Client;
+use tokio::io::AsyncWriteExt;
 
-pub(crate) fn extract_zip(data: &[u8], target_dir: &Path, strip_toplevel: bool) -> anyhow::Result<()> {
+pub(crate) fn extract_zip(data: &[u8], target_dir: &Path, strip_toplevel: bool) -> Result<()> {
     let cursor = std::io::Cursor::new(data);
     let mut archive = zip::ZipArchive::new(cursor)?;
     for i in 0..archive.len() {
@@ -21,21 +26,19 @@ pub(crate) fn extract_zip(data: &[u8], target_dir: &Path, strip_toplevel: bool) 
         }
         let out_path = target_dir.join(&path);
         if file.is_dir() {
-            fs::create_dir_all(&out_path)?;
+            std::fs::create_dir_all(&out_path)?;
             continue;
         }
         if let Some(parent) = out_path.parent() {
-            fs::create_dir_all(parent)?;
+            std::fs::create_dir_all(parent)?;
         }
-        let mut out_file = fs::File::create(&out_path)?;
+        let mut out_file = std::fs::File::create(&out_path)?;
         std::io::copy(&mut file, &mut out_file)?;
     }
     Ok(())
 }
 
 // --------------------------------- MULTIPLATFORM
-
-use directories::ProjectDirs;
 
 pub fn base_path() -> std::path::PathBuf {
     // Win: C:\Users\Nombre\AppData\Roaming\OxideMC\data
@@ -47,30 +50,29 @@ pub fn base_path() -> std::path::PathBuf {
     std::path::PathBuf::from(".minecraft")
 }
 
-pub fn clean_data_directory(base_path: &Path) -> std::io::Result<()> {
+pub fn clean_data_directory(base_path: &Path) -> Result<()> {
     if !base_path.exists() || !base_path.is_dir() {
         return Ok(());
     }
-    
-    for entry in fs::read_dir(base_path)? {
+
+    for entry in std::fs::read_dir(base_path)? {
         let entry = entry?;
         let path = entry.path();
-        
+
         if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
-            
             if file_name == "install_profile.json" || file_name == "runtime" {
                 println!("Skip: {}", file_name);
                 continue;
             }
-            
+
             if path.is_dir() {
-                if let Err(e) = fs::remove_dir_all(&path) {
+                if let Err(e) = std::fs::remove_dir_all(&path) {
                     eprintln!("Folder cannot be deleted {:?}: {}", path, e);
                 } else {
                     println!("Folder deleted: {}", file_name);
                 }
             } else {
-                if let Err(e) = fs::remove_file(&path) {
+                if let Err(e) = std::fs::remove_file(&path) {
                     eprintln!("File cannot be deleted {:?}: {}", path, e);
                 } else {
                     println!("File deleted: {}", file_name);
@@ -78,6 +80,29 @@ pub fn clean_data_directory(base_path: &Path) -> std::io::Result<()> {
             }
         }
     }
+    Ok(())
+}
+
+pub async fn download_file(client: &Client, url: &str, target_path: &Path) -> Result<()> {
+    if let Some(parent) = target_path.parent() {
+        fs::create_dir_all(parent).await?;
+    }
+
+    let response = client.get(url).send().await?;
+
+    if !response.status().is_success() {
+        return Err(anyhow::anyhow!("Failed to download: {}", response.status()));
+    }
+
+    let mut stream = response.bytes_stream();
+    let mut file = fs::File::create(target_path).await?;
+
+    while let Some(item) = stream.next().await {
+        let chunk = item?;
+        file.write_all(&chunk).await?; // Free RAM chunk and continue
+    }
+
+    file.flush().await?;
 
     Ok(())
 }

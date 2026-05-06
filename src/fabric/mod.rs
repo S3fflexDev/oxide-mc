@@ -1,14 +1,16 @@
 use std::path::Path;
-use tokio::fs;
-use tokio::io::AsyncWriteExt;
+use std::sync::Arc;
 use crate::fabric::models::{FabricLibrary, FabricProfile};
 use crate::platform::CLASSPATH_SEPARATOR;
 use crate::mc;
 use crate::mc::models::VersionManifest;
 use crate::net::get_http_client;
-
+use tokio::task::JoinSet;
 use anyhow::Result;
+use tokio::sync::Semaphore;
+use tracing::info;
 use crate::fabric::index_model::{FabricLoaderVersions};
+use crate::functions::download_file;
 
 const FABRIC_LOADERS_URL_INDEX: &str = "https://meta.fabricmc.net/v2/versions/loader/";
 
@@ -56,36 +58,39 @@ pub async fn download_fabric_libraries(
     let client = get_http_client();
     let libraries_dir = base_path.join("libraries");
 
-    println!("Starting download of Fabric libraries...");
+    let mut set = JoinSet::new();
+    let semaphore = Arc::new(Semaphore::new(10));
+
+    println!("Starting download of {} Fabric libraries...", manifest_fabric.libraries.len());
 
     for lib in &manifest_fabric.libraries {
         let relative_path_buf = gen_fabric_path(lib);
-
         let target_path = libraries_dir.join(&relative_path_buf);
-
         let url_path = relative_path_buf.to_string_lossy().replace('\\', "/");
         let download_url = format!("{}{}", lib.url, url_path);
 
-        if let Some(parent) = target_path.parent() {
-            fs::create_dir_all(parent).await?;
-        }
+        let client = client.clone();
+        let target_path = target_path.clone();
+        let download_url = download_url.clone();
+        let permit = semaphore.clone().acquire_owned().await?;
 
-        if target_path.exists() {
-            continue;
-        }
+        set.spawn(async move {
+            let _permit = permit;
 
-        println!("Downloading Fabric Lib: {}", lib.name);
-        let response = client.get(&download_url).send().await?;
-        if !response.status().is_success() {
-            println!("Error 404 in Fabric Lib: {}", download_url);
-            continue;
-        }
-        let bytes = response.bytes().await?;
-        let mut file = fs::File::create(&target_path).await?;
-        file.write_all(&bytes).await?;
+            if !target_path.exists() {
+                download_file(&client, &download_url, &target_path).await?;
+                info!("- Installed: {}", target_path.file_name().unwrap_or_default().to_string_lossy());
+            }
+
+            Ok::<(), anyhow::Error>(())
+        });
     }
 
-    println!("Fabric libraries downloaded successfully!");
+    while let Some(res) = set.join_next().await {
+        res??;
+    }
+
+    println!("Fabric libraries installed");
     Ok(())
 }
 

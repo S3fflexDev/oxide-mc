@@ -64,8 +64,8 @@ Si no se descarga la versión de Java indicada para la versión que se va a inst
 |:---------------------|:----------------:|:--------------------|
 | **1.20.5 — 1.21.x**  |     Java 21      | `java_download(21)` |
 | **1.18 — 1.20.4**    |     Java 17      | `java_download(17)` |
-| **1.17**             |     Java 16      | `java_download(16)` |
-| **1.12.2 — 1.16.5**  |   Java 8 / 11    | `java_download(8)`  |
+| **1.17**             |     Java 17      | `java_download(17)` |
+| **1.12.2 — 1.16.5**  |      Java 8      | `java_download(8)`  |
 | **1.7.10 — 1.12.1**  |      Java 8      | `java_download(8)`  |
 | **Versiones Legacy** |      Java 8      | `java_download(8)`  |
 

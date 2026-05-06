@@ -76,6 +76,9 @@ impl OxideLauncher {
         modloader: ModLoader,
         clean_install: bool
     ) -> Result<i64> {
+
+        tracing_subscriber::fmt::init();
+
         println!("Beggining installation on: {:?}", self.settings.game_path);
 
         let base_path = base_path();

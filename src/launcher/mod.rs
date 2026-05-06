@@ -1,5 +1,6 @@
 use crate::mc::models::VersionManifest;
 use std::process::{Child, Command};
+use anyhow::Result;
 
 pub fn launch_game(
     manifest: &VersionManifest,
@@ -10,7 +11,7 @@ pub fn launch_game(
     main_class: String,
     natives: bool,
     max_ram: &str
-) -> anyhow::Result<Child> {
+) -> Result<Child> {
     let mut cmd = Command::new(java_bin_path);
 
     let natives_path = base_path.join("versions").join(&manifest.id).join("natives");

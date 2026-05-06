@@ -5,7 +5,7 @@ use oxide_mc::OxideLauncher;
 async fn test_install() -> anyhow::Result<()> {
     let launcher = OxideLauncher::new("TestUser");
 
-    launcher.full_install(None, "1.16.5", oxide_mc::state::models::ModLoader::Fabric, false).await?;
+    launcher.full_install(None, "1.16.5", oxide_mc::state::models::ModLoader::Fabric, true).await?;
     Ok(())
 }
 
@@ -23,7 +23,7 @@ async fn run() -> anyhow::Result<()> {
 async fn java_download() -> anyhow::Result<()> {
     let mut launcher = OxideLauncher::new("TestUser");
 
-    launcher.java_download(8).await?;
+    launcher.java_download(17).await?;
     Ok(())
 }
 

@@ -2,9 +2,10 @@ use std::process::Command;
 use tokio::fs;
 use crate::functions::extract_zip;
 use crate::net::get_http_client;
+use anyhow::Result;
 
 #[cfg(target_os = "windows")]
-fn java_download_url(version: i64) -> anyhow::Result<(&'static str, &'static str)> {
+fn java_download_url(version: i64) -> Result<(&'static str, &'static str)> {
     match version {
         8 => Ok(("jdk8u472-b08", "https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u472-b08/OpenJDK8U-jdk_x64_windows_hotspot_8u472b08.zip")),
         17 => Ok(("jdk-17.0.5+8", "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.5%2B8/OpenJDK17U-jdk_x64_windows_hotspot_17.0.5_8.zip")),
@@ -14,7 +15,7 @@ fn java_download_url(version: i64) -> anyhow::Result<(&'static str, &'static str
 }
 
 #[cfg(target_os = "linux")]
-fn java_download_url(version: i64) -> anyhow::Result<(&'static str, &'static str)> {
+fn java_download_url(version: i64) -> Result<(&'static str, &'static str)> {
     match version {
         8 => Ok(("jdk8u472-b08", "https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u472-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u472b08.tar.gz")),
         17 => Ok(("jdk-17.0.5+8", "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.5%2B8/OpenJDK17U-jdk_x64_linux_hotspot_17.0.5_8.tar.gz")),
@@ -24,7 +25,7 @@ fn java_download_url(version: i64) -> anyhow::Result<(&'static str, &'static str
 }
 
 #[cfg(target_os = "macos")]
-fn java_download_url(version: i64) -> anyhow::Result<(&'static str, &'static str)> {
+fn java_download_url(version: i64) -> Result<(&'static str, &'static str)> {
     match version {
         8 => Ok(("jdk8u472-b08", "https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u472-b08/OpenJDK8U-jdk_x64_mac_hotspot_8u472b08.tar.gz")),
         17 => Ok(("jdk-17.0.5+8", "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.5%2B8/OpenJDK17U-jdk_x64_mac_hotspot_17.0.5_8.tar.gz")),
@@ -34,13 +35,13 @@ fn java_download_url(version: i64) -> anyhow::Result<(&'static str, &'static str
 }
 
 #[cfg(target_os = "windows")]
-fn extract_java_archive(data: &[u8], runtime_dir: &std::path::Path) -> anyhow::Result<()> {
+fn extract_java_archive(data: &[u8], runtime_dir: &std::path::Path) -> Result<()> {
     extract_zip(data, runtime_dir, true)?;
     Ok(())
 }
 
 #[cfg(not(target_os = "windows"))]
-fn extract_java_archive(data: &[u8], runtime_dir: &std::path::Path) -> anyhow::Result<()> {
+fn extract_java_archive(data: &[u8], runtime_dir: &std::path::Path) -> Result<()> {
     use std::path::PathBuf;
 
     let decoder = flate2::read::GzDecoder::new(data);
@@ -65,7 +66,7 @@ fn extract_java_archive(data: &[u8], runtime_dir: &std::path::Path) -> anyhow::R
 pub async fn download_java_runtime(
     base_path: &std::path::Path,
     version: i64,
-) -> anyhow::Result<String> {
+) -> Result<String> {
     let runtime_dir = base_path.join("runtime");
 
     let (full_name, url) = java_download_url(version)?;
@@ -88,7 +89,7 @@ pub async fn download_java_runtime(
     Ok(full_name.to_string())
 }
 
-pub fn check_java_version() -> anyhow::Result<i32> {
+pub fn check_java_version() -> Result<i32> {
     let output = Command::new("java").arg("-version").output();
     println!("Checking Java version...");
 

@@ -61,7 +61,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-oxide-mc = "0.2.1"
+oxide-mc = "0.2.2"
 ```
 
 or use command: `cargo add oxide-mc`
