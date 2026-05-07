@@ -1,3 +1,4 @@
+use crate::functions::extract_zip;
 use crate::net::get_http_client;
 use anyhow::Result;
 use std::process::Command;
