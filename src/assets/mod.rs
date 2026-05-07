@@ -1,9 +1,9 @@
-use tokio::fs;
-use tracing::info;
 use crate::functions::download_file;
 use crate::mc::models::{AssetIndexContent, VersionManifest};
 use crate::net::get_http_client;
 use anyhow::Result;
+use tokio::fs;
+use tracing::info;
 
 pub async fn download_assets(
     manifest: &VersionManifest,
@@ -50,7 +50,10 @@ pub async fn download_assets(
                 return Ok(());
             }
 
-            let url = format!("https://resources.download.minecraft.net/{}/{}", prefix, hash);
+            let url = format!(
+                "https://resources.download.minecraft.net/{}/{}",
+                prefix, hash
+            );
 
             info!("Downloading asset: {}", url);
 

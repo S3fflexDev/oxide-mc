@@ -1,4 +1,3 @@
-
 #[cfg(target_os = "windows")]
 pub const JAVA_EXECUTABLE: &str = "java.exe";
 #[cfg(not(target_os = "windows"))]

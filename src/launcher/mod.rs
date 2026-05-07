@@ -1,6 +1,6 @@
 use crate::mc::models::VersionManifest;
-use std::process::{Child, Command};
 use anyhow::Result;
+use std::process::{Child, Command};
 
 pub fn launch_game(
     manifest: &VersionManifest,
@@ -10,18 +10,24 @@ pub fn launch_game(
     classpath: String,
     main_class: String,
     natives: bool,
-    max_ram: &str
+    max_ram: &str,
 ) -> Result<Child> {
     let mut cmd = Command::new(java_bin_path);
 
-    let natives_path = base_path.join("versions").join(&manifest.id).join("natives");
+    let natives_path = base_path
+        .join("versions")
+        .join(&manifest.id)
+        .join("natives");
 
     // Memory arguments
     cmd.arg(format!("-Xmx{}", max_ram));
     cmd.arg("-Xms512M");
 
     if natives {
-        cmd.arg(format!("-Djava.library.path={}", natives_path.to_string_lossy()));
+        cmd.arg(format!(
+            "-Djava.library.path={}",
+            natives_path.to_string_lossy()
+        ));
     }
 
     // Classpath

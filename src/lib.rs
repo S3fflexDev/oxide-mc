@@ -5,6 +5,7 @@ use crate::platform::JAVA_EXECUTABLE;
 use crate::state::models::{InstallationProfile, ModLoader};
 use anyhow::Result;
 use std::path::PathBuf;
+use tracing::{info, warn};
 
 mod assets;
 pub mod fabric;
@@ -110,36 +111,32 @@ impl OxideLauncher {
         match v.as_slice() {
             [1, minor, ..] if *minor < 19 => {
                 // Menor
-                println!("Version {} is -1.19", version);
                 natives_libraries = Some(true);
             }
             [1, minor, ..] if *minor >= 19 => {
                 // Mayor
-                println!("Version {} is +1.19", version);
                 natives_libraries = Some(false);
             }
             _ => {
-                println!("Unknown version: {}", version);
+                warn!("Unknown version: {}", version);
             }
         }
 
         let modloader: &str = match modloader {
             ModLoader::Vanilla => {
-                println!("Vanilla installation complete.");
+                info!("Vanilla installing");
                 "vanilla"
             }
             ModLoader::Fabric => {
-                println!("Installing Fabric...");
+                info!("Fabric installing");
                 fabric::download_fabric_libraries(&fabric_manifest, &self.settings.game_path)
                     .await?;
                 main_class = fabric_manifest.main_class.clone();
                 final_classpath = fabric::gen_cp_fabric(&manifest, &fabric_manifest, &base_path);
-                println!("Fabric installation complete.");
                 "fabric"
             }
             ModLoader::NeoForge => {
-                println!("Installing NeoForge...");
-                println!("Neoforge is not available.");
+                println!("Neoforge is not available");
                 "neoforge"
             }
         };
@@ -164,7 +161,7 @@ impl OxideLauncher {
             modpack::inject_modpack(url, &self.settings.game_path).await?;
         }
 
-        println!(
+        warn!(
             "Install java {} before running with command java_download!.",
             java_version
         );
@@ -182,10 +179,7 @@ impl OxideLauncher {
         }
 
         let profile = match state::load_profile()? {
-            Some(p) => {
-                println!("Found installation profile: {}", p.minecraft_version);
-                p
-            }
+            Some(p) => p,
             None => {
                 return Err(anyhow::anyhow!(
                     "No installation found. Please run the 'install' command first."

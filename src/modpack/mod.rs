@@ -1,5 +1,5 @@
-use tokio::fs;
 use crate::net::get_http_client;
+use tokio::fs;
 
 pub async fn inject_modpack(url: &str, base_path: &std::path::Path) -> anyhow::Result<()> {
     let client = get_http_client();

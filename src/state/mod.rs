@@ -1,5 +1,4 @@
-
-use crate::{functions};
+use crate::functions;
 use anyhow::Result;
 
 pub mod models;

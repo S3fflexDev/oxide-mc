@@ -70,7 +70,6 @@ pub async fn download_java_runtime(base_path: &std::path::Path, version: i64) ->
     println!("Downloading JDK {} portable...", version);
 
     if runtime_dir.exists() {
-        println!("Erasing old java...");
         fs::remove_dir_all(&runtime_dir).await?;
     }
 

@@ -50,7 +50,7 @@ pub struct GameRule {
 #[serde(rename_all = "snake_case")]
 pub enum Action {
     Allow,
-    Disallow
+    Disallow,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

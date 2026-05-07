@@ -1,9 +1,9 @@
-use tokio::fs;
-use std::path::Path;
 use anyhow::Result;
 use directories::ProjectDirs;
 use futures_util::StreamExt;
 use reqwest::Client;
+use std::path::Path;
+use tokio::fs;
 use tokio::io::AsyncWriteExt;
 
 pub(crate) fn extract_zip(data: &[u8], target_dir: &Path, strip_toplevel: bool) -> Result<()> {

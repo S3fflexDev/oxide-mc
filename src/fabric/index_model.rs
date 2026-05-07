@@ -1,4 +1,4 @@
-use serde::{Deserialize};
+use serde::Deserialize;
 
 pub type FabricLoaderVersions = Vec<FabricLoaderVersion>;
 

@@ -1,27 +1,25 @@
-use std::path::Path;
-use std::sync::Arc;
+use crate::fabric::index_model::FabricLoaderVersions;
 use crate::fabric::models::{FabricLibrary, FabricProfile};
-use crate::platform::CLASSPATH_SEPARATOR;
+use crate::functions::download_file;
 use crate::mc;
 use crate::mc::models::VersionManifest;
 use crate::net::get_http_client;
-use tokio::task::JoinSet;
+use crate::platform::CLASSPATH_SEPARATOR;
 use anyhow::Result;
+use std::path::Path;
+use std::sync::Arc;
 use tokio::sync::Semaphore;
+use tokio::task::JoinSet;
 use tracing::info;
-use crate::fabric::index_model::{FabricLoaderVersions};
-use crate::functions::download_file;
 
 const FABRIC_LOADERS_URL_INDEX: &str = "https://meta.fabricmc.net/v2/versions/loader/";
 
 // const FABRIC_LOADER_URL_BASE: &str = "https://meta.fabricmc.net/v2/versions/loader/"; // Add /profile/json at end
 
-
-pub(crate) mod models;
 mod index_model;
+pub(crate) mod models;
 
 pub async fn get_fabric_manifest(version: &str) -> Result<FabricProfile> {
-
     // https://meta.fabricmc.net/v2/versions/loader/1.20.1/0.19.2/profile/json
     let url = find_latest_stable_fabric_loader_url(version).await?; // I'm dumb ^^
 
@@ -61,7 +59,10 @@ pub async fn download_fabric_libraries(
     let mut set = JoinSet::new();
     let semaphore = Arc::new(Semaphore::new(10));
 
-    println!("Starting download of {} Fabric libraries...", manifest_fabric.libraries.len());
+    println!(
+        "Starting download of {} Fabric libraries...",
+        manifest_fabric.libraries.len()
+    );
 
     for lib in &manifest_fabric.libraries {
         let relative_path_buf = gen_fabric_path(lib);
@@ -79,7 +80,13 @@ pub async fn download_fabric_libraries(
 
             if !target_path.exists() {
                 download_file(&client, &download_url, &target_path).await?;
-                info!("- Installed: {}", target_path.file_name().unwrap_or_default().to_string_lossy());
+                info!(
+                    "- Installed: {}",
+                    target_path
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                );
             }
 
             Ok::<(), anyhow::Error>(())
@@ -123,7 +130,10 @@ pub fn gen_cp_fabric(
 }
 
 pub async fn find_latest_stable_fabric_loader_url(minecraft_version: &str) -> Result<String> {
-    println!("Fetching available Fabric loaders for Minecraft {}...", minecraft_version);
+    println!(
+        "Fetching available Fabric loaders for Minecraft {}...",
+        minecraft_version
+    );
     let client = get_http_client();
     let index_url = format!("{}{}", FABRIC_LOADERS_URL_INDEX, minecraft_version);
 
@@ -143,14 +153,14 @@ pub async fn find_latest_stable_fabric_loader_url(minecraft_version: &str) -> Re
 
             let profile_url = format!(
                 "https://meta.fabricmc.net/v2/versions/loader/{}/{}/profile/json",
-                minecraft_version,
-                loader_version
+                minecraft_version, loader_version
             );
 
             Ok(profile_url)
         }
-        None => {
-            Err(anyhow::anyhow!("No stable Fabric loader found for Minecraft version '{}'.", minecraft_version))
-        }
+        None => Err(anyhow::anyhow!(
+            "No stable Fabric loader found for Minecraft version '{}'.",
+            minecraft_version
+        )),
     }
 }

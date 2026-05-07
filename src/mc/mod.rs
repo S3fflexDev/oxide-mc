@@ -1,15 +1,15 @@
 pub(crate) mod models;
 
+use crate::functions::{download_file, extract_zip};
+use crate::mc::models::{Action, Library, Name, VersionManifest};
+use crate::net::get_http_client;
+use crate::{state, version_index};
+use anyhow::Result;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
-use crate::mc::models::{Action, Library, Name, VersionManifest};
-use crate::net::get_http_client;
-use crate::{state, version_index};
-use crate::functions::{download_file, extract_zip};
-use anyhow::Result;
 use tracing::info;
 
 pub async fn get_manifest(version: &str) -> Result<VersionManifest> {
@@ -45,10 +45,7 @@ pub async fn get_manifest(version: &str) -> Result<VersionManifest> {
     Ok(manifest)
 }
 
-pub async fn download_libraries(
-    manifest: &VersionManifest,
-    base_path: &Path,
-) -> Result<()> {
+pub async fn download_libraries(manifest: &VersionManifest, base_path: &Path) -> Result<()> {
     let client = get_http_client();
     let libraries_dir = base_path.join("libraries");
 
@@ -56,9 +53,15 @@ pub async fn download_libraries(
     let semaphore = Arc::new(Semaphore::new(10));
 
     for lib in &manifest.libraries {
-        let Some(artifact) = &lib.downloads.artifact else { continue; };
+        let Some(artifact) = &lib.downloads.artifact else {
+            continue;
+        };
 
-        let relative_path = artifact.path.as_ref().ok_or_else(|| anyhow::anyhow!("Missing path"))?.clone();
+        let relative_path = artifact
+            .path
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Missing path"))?
+            .clone();
         let target_path = libraries_dir.join(&relative_path);
         let url = artifact.url.clone();
         let client = client.clone();
@@ -66,7 +69,6 @@ pub async fn download_libraries(
         let permit = semaphore.clone().acquire_owned().await?;
 
         set.spawn(async move {
-
             let _permit = permit;
 
             if !target_path.exists() {
@@ -87,10 +89,7 @@ pub async fn download_libraries(
     Ok(())
 }
 
-pub async fn download_client(
-    manifest: &VersionManifest,
-    base_path: &Path,
-) -> Result<()> {
+pub async fn download_client(manifest: &VersionManifest, base_path: &Path) -> Result<()> {
     let client = get_http_client();
 
     let version_dir = base_path.join("versions").join(&manifest.id);
@@ -99,11 +98,10 @@ pub async fn download_client(
     fs::create_dir_all(&version_dir).await?;
 
     if target_path.exists() {
-        println!("Client.jar already exists");
         return Ok(());
     }
 
-    println!("Downloading game code (client.jar)...");
+    info!("Downloading game code (client.jar)...");
 
     download_file(&client, &manifest.downloads.client.url, &target_path).await?;
 
@@ -111,7 +109,6 @@ pub async fn download_client(
 
     Ok(())
 }
-
 
 pub(crate) fn collect_vanilla_cp(
     libraries: &[Library],
@@ -135,7 +132,7 @@ pub(crate) fn collect_vanilla_cp(
                 }
             }
         }
-        
+
         if let Some(native_artifact) = lib.downloads.classifiers.get("natives-windows") {
             if let Some(rel_path) = &native_artifact.path {
                 let full_path = libraries_dir.join(rel_path);
@@ -168,17 +165,6 @@ pub(crate) fn should_use_library(lib: &Library) -> bool {
     true
 }
 
-/*
-fn get_library_base_name(name: &str) -> String {
-    let parts: Vec<&str> = name.split(':').collect();
-    if parts.len() >= 2 {
-        format!("{}:{}", parts[0], parts[1])
-    } else {
-        name.to_string()
-    }
-}
-*/
-
 pub fn gen_classpath(manifest: &VersionManifest, base_path: &Path) -> String {
     let mut cp_parts = Vec::new();
     let libraries_dir = base_path.join("libraries");
@@ -208,9 +194,15 @@ pub fn get_native_classifier(lib: &Library) -> Option<String> {
     lib.natives.as_ref()?.get(os_key).cloned()
 }
 
-pub async fn download_and_extract_natives(manifest: &VersionManifest, base_path: &Path) -> Result<()> {
+pub async fn download_and_extract_natives(
+    manifest: &VersionManifest,
+    base_path: &Path,
+) -> Result<()> {
     let client = reqwest::Client::new();
-    let natives_dir = base_path.join("versions").join(&manifest.id).join("natives");
+    let natives_dir = base_path
+        .join("versions")
+        .join(&manifest.id)
+        .join("natives");
     fs::create_dir_all(&natives_dir).await?;
 
     let mut set = JoinSet::new();
@@ -241,7 +233,8 @@ pub async fn download_and_extract_natives(manifest: &VersionManifest, base_path:
                         extract_zip(&bytes, &natives_dir, false)?;
                         std::fs::remove_file(&temp_file)?;
                         Ok::<(), anyhow::Error>(())
-                    }).await??;
+                    })
+                    .await??;
 
                     Ok::<(), anyhow::Error>(())
                 });
@@ -257,22 +250,19 @@ pub async fn download_and_extract_natives(manifest: &VersionManifest, base_path:
 }
 
 pub async fn check_game_installed(version: &str, mod_loader: &str) -> Result<bool> {
-
     let profile = match state::load_profile()? {
-        Some(p) => {
-            p
-        },
+        Some(p) => p,
         None => {
             return Ok(false);
         }
     };
 
     if profile.minecraft_version != version {
-        return Ok(false)
+        return Ok(false);
     }
 
     if profile.modloader_type != mod_loader {
-        return Ok(false)
+        return Ok(false);
     }
 
     Ok(true)
