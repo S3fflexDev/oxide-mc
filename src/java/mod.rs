@@ -1,4 +1,4 @@
-use crate::functions::extract_zip;
+use crate::functions::{download_file, extract_zip};
 use crate::net::get_http_client;
 use anyhow::Result;
 use std::process::Command;
@@ -74,11 +74,25 @@ pub async fn download_java_runtime(base_path: &std::path::Path, version: i64) ->
         fs::remove_dir_all(&runtime_dir).await?;
     }
 
-    let client = get_http_client();
-    let bytes = client.get(url).send().await?.bytes().await?;
-
     fs::create_dir_all(&runtime_dir).await?;
-    extract_java_archive(&bytes, &runtime_dir)?;
+
+    let client = get_http_client();
+
+    let temp_file = runtime_dir.join(format!("{}.tmp", full_name.replace(':', "_")));
+
+    download_file(&client, &url, &temp_file).await?;
+
+    let t_file = temp_file.clone();
+    let r_dir = runtime_dir.clone();
+
+    // For not blocking tokio (hilo), block process until extracted
+    tokio::task::spawn_blocking(move || {
+        let bytes = std::fs::read(&t_file)?;
+        extract_java_archive(&bytes, &r_dir)?;
+        std::fs::remove_file(&t_file)?;
+        Ok::<(), anyhow::Error>(())
+    })
+    .await??;
 
     println!("Java successfully installed.");
 

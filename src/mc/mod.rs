@@ -98,10 +98,11 @@ pub async fn download_client(manifest: &VersionManifest, base_path: &Path) -> Re
     fs::create_dir_all(&version_dir).await?;
 
     if target_path.exists() {
+        println!("Client.jar already exists");
         return Ok(());
     }
 
-    info!("Downloading game code (client.jar)...");
+    println!("Downloading game code (client.jar)...");
 
     download_file(&client, &manifest.downloads.client.url, &target_path).await?;
 
@@ -133,7 +134,7 @@ pub(crate) fn collect_vanilla_cp(
             }
         }
 
-        if let Some(native_artifact) = lib.downloads.classifiers.get("natives-windows") {
+        if let Some(native_artifact) = lib.downloads.classifiers.get("natives-linux") {
             if let Some(rel_path) = &native_artifact.path {
                 let full_path = libraries_dir.join(rel_path);
                 if let Some(path_str) = full_path.to_str() {
@@ -148,10 +149,20 @@ pub(crate) fn collect_vanilla_cp(
 }
 pub(crate) fn should_use_library(lib: &Library) -> bool {
     if let Some(rules) = &lib.rules {
+        let current_os = if cfg!(target_os = "windows") {
+            Name::Windows
+        } else if cfg!(target_os = "linux") {
+            Name::Linux
+        } else if cfg!(target_os = "macos") {
+            Name::Osx
+        } else {
+            return false;
+        };
+
         let mut allow = false;
         for rule in rules {
             let os_matches = if let Some(os) = &rule.os {
-                os.name == Name::Windows
+                os.name == current_os
             } else {
                 true
             };
@@ -164,6 +175,17 @@ pub(crate) fn should_use_library(lib: &Library) -> bool {
     }
     true
 }
+
+/*
+fn get_library_base_name(name: &str) -> String {
+    let parts: Vec<&str> = name.split(':').collect();
+    if parts.len() >= 2 {
+        format!("{}:{}", parts[0], parts[1])
+    } else {
+        name.to_string()
+    }
+}
+*/
 
 pub fn gen_classpath(manifest: &VersionManifest, base_path: &Path) -> String {
     let mut cp_parts = Vec::new();

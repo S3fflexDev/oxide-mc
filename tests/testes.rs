@@ -1,11 +1,20 @@
 use oxide_mc::OxideLauncher;
 
+// cargo test ... -- --ignored -- --no-capture
+
 #[tokio::test]
 #[ignore]
 async fn test_install() -> anyhow::Result<()> {
     let launcher = OxideLauncher::new("TestUser");
 
-    launcher.full_install(None, "1.16.5", oxide_mc::state::models::ModLoader::Fabric, true).await?;
+    launcher
+        .full_install(
+            None,
+            "1.16.5",
+            oxide_mc::state::models::ModLoader::Fabric,
+            true,
+        )
+        .await?;
     Ok(())
 }
 
