@@ -1,6 +1,6 @@
 use oxide_mc::OxideLauncher;
 
-// cargo test ... -- --ignored -- --no-capture
+// cargo test ... -- --ignored --no-capture
 
 #[tokio::test]
 #[ignore]
@@ -10,8 +10,8 @@ async fn test_install() -> anyhow::Result<()> {
     launcher
         .full_install(
             None,
-            "1.16.5",
-            oxide_mc::state::models::ModLoader::Fabric,
+            "1.20.1",
+            oxide_mc::state::models::ModLoader::Vanilla,
             true,
         )
         .await?;
@@ -32,7 +32,7 @@ async fn run() -> anyhow::Result<()> {
 async fn java_download() -> anyhow::Result<()> {
     let mut launcher = OxideLauncher::new("TestUser");
 
-    launcher.java_download(17).await?;
+    launcher.java_download(21).await?;
     Ok(())
 }
 
